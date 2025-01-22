@@ -136,7 +136,7 @@ void test_append_dataframe() {
 
     int int_data1[] = {1, 2, 3};
     float float_data1[] = {1.1f, 2.20000266666273f, 3.3f};
-    char *string_data1[] = {"one", "two", "threddddddddddddddde"};
+    char *string_data1[] = {"one", "two", "thredddddddjjjjjjjjjjjjjjjjdddddddde"};
 
     int int_data2[] = {4, 5};
     float float_data2[] = {4.4f, 5.5f};

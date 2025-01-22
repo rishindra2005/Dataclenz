@@ -89,36 +89,81 @@ void print_dataframe(DataFrame *df) {
         return;
     }
 
+    // Calculate column widths
+    int col_widths[MAX_COLUMNS] = {0};
+    for (int i = 0; i < df->num_columns; i++) {
+        col_widths[i] = strlen(df->column_names[i]);
+        for (int row = 0; row < df->num_rows; row++) {
+            char buffer[64];
+            int len = 0;
+            switch (df->columns[i].type) {
+                case TYPE_INT:
+                    len = snprintf(buffer, sizeof(buffer), "%d", ((int*)df->columns[i].data)[row]);
+                    break;
+                case TYPE_FLOAT:
+                    len = snprintf(buffer, sizeof(buffer), "%.2f", ((float*)df->columns[i].data)[row]);
+                    break;
+                case TYPE_STRING:
+                    len = strlen(((char**)df->columns[i].data)[row]);
+                    break;
+            }
+            if (len > col_widths[i]) col_widths[i] = len;
+        }
+        // Limit column width to 25 characters
+        if (col_widths[i] > 25) col_widths[i] = 25;
+    }
+
+    // Print top border
+    for (int i = 0; i < df->num_columns; i++) {
+        printf("+%.*s", col_widths[i] + 2, "------------------------------------");
+    }
+    printf("+\n");
+
     // Print column names
     for (int i = 0; i < df->num_columns; i++) {
-        printf("%-20s", df->column_names[i]);
+        printf("| %-*.*s ", col_widths[i], col_widths[i], df->column_names[i]);
     }
-    printf("\n");
+    printf("|\n");
 
     // Print separator
     for (int i = 0; i < df->num_columns; i++) {
-        printf("--------------------");
+        printf("+%.*s", col_widths[i] + 2, "------------------------------------");
     }
-    printf("\n");
+    printf("+\n");
 
     // Print data
     for (int row = 0; row < df->num_rows; row++) {
         for (int col = 0; col < df->num_columns; col++) {
+            printf("| ");
             switch (df->columns[col].type) {
                 case TYPE_INT:
-                    printf("%-20d", ((int*)df->columns[col].data)[row]);
+                    printf("%-*d ", col_widths[col], ((int*)df->columns[col].data)[row]);
                     break;
                 case TYPE_FLOAT:
-                    printf("%-20.2f", ((float*)df->columns[col].data)[row]);
+                    printf("%-*.2f ", col_widths[col], ((float*)df->columns[col].data)[row]);
                     break;
-                case TYPE_STRING:
-                    printf("%-20s", ((char**)df->columns[col].data)[row]);
+                case TYPE_STRING: {
+                    char *str = ((char**)df->columns[col].data)[row];
+                    if (strlen(str) > col_widths[col]) {
+                        printf("%-.*s... ", col_widths[col] - 3, str);
+                    } else {
+                        printf("%-*s ", col_widths[col], str);
+                    }
                     break;
+                }
             }
         }
-        printf("\n");
+        printf("|\n");
     }
+
+    // Print bottom border
+    for (int i = 0; i < df->num_columns; i++) {
+        printf("+%.*s", col_widths[i] + 2, "------------------------------------");
+    }
+    printf("+\n");
 }
+
+
 
 int* shape_df(DataFrame *df) {
     static int shape[2];
