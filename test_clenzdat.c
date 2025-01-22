@@ -246,13 +246,69 @@ void test_get_dataframe_range() {
 
     free_dataframe(df);
 }
+void test_sort_dataframe() {
+    // Create a sample DataFrame
+    DataFrame *df = create_dataframe();
+    if (df == NULL) {
+        printf("Failed to create DataFrame\n");
+        return;
+    }
+
+    // Add columns
+    int ages[] = {30, 25, 40, 35, 28};
+    float salaries[] = {50000.0, 45000.0, 60000.0, 55000.0, 48000.0};
+    char *names[] = {"Alice", "Bob", "Charlie", "David", "Eve"};
+
+    add_column(df, "Age", TYPE_INT, ages, 5);
+    add_column(df, "Salary", TYPE_FLOAT, salaries, 5);
+    add_column(df, "Name", TYPE_STRING, names, 5);
+
+    // Print original DataFrame
+    printf("Original DataFrame:\n");
+    print_dataframe(df);
+
+    // Sort by Age (ascending)
+    DataFrame *sorted_by_age = sort_dataframe(df, 0, 1);
+    if (sorted_by_age != NULL) {
+        printf("\nSorted by Age (ascending):\n");
+        print_dataframe(sorted_by_age);
+        free_dataframe(sorted_by_age);
+    } else {
+        printf("Failed to sort by Age\n");
+    }
+
+    // Sort by Salary (descending)
+    DataFrame *sorted_by_salary = sort_dataframe(df, 1, 0);
+    if (sorted_by_salary != NULL) {
+        printf("\nSorted by Salary (descending):\n");
+        print_dataframe(sorted_by_salary);
+        free_dataframe(sorted_by_salary);
+    } else {
+        printf("Failed to sort by Salary\n");
+    }
+
+    // Sort by Name (ascending)
+    DataFrame *sorted_by_name = sort_dataframe(df, 1, 1);
+    if (sorted_by_name != NULL) {
+        printf("\nSorted by Name (ascending):\n");
+        print_dataframe(sorted_by_name);
+        free_dataframe(sorted_by_name);
+    } else {
+        printf("Failed to sort by Name\n");
+    }
+
+    // Clean up
+    free_dataframe(df);
+}
 int main() {
     test_create_dataframe();
     test_add_column();
     test_get_column_as_array();
     test_append_dataframe();
     test_large_dataframe();
-    test_get_dataframe_range();  // Add this line
+    test_get_dataframe_range();  
+    test_sort_dataframe();
+
     return 0;
 }
 

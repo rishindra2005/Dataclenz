@@ -909,3 +909,84 @@ DataFrame* append_dataframe(DataFrame *df1, DataFrame *df2) {
     return result;
 }
 
+
+// ascending 1 for ascending order and 0 for descending order
+DataFrame* sort_dataframe(DataFrame *df, int column_index, int ascending) {
+    if (df == NULL || column_index < 0 || column_index >= df->num_columns) {
+        set_error("Invalid DataFrame or column index");
+        return NULL;
+    }
+
+    DataFrame *sorted_df = create_dataframe();
+    if (sorted_df == NULL) {
+        set_error("Failed to create new DataFrame for sorting");
+        return NULL;
+    }
+
+    // Copy all columns to the new DataFrame
+    for (int i = 0; i < df->num_columns; i++) {
+        void *new_data = malloc(df->num_rows * get_column_element_size(df->columns[i].type));
+        if (new_data == NULL) {
+            set_error("Memory allocation failed in sort_dataframe");
+            free_dataframe(sorted_df);
+            return NULL;
+        }
+        memcpy(new_data, df->columns[i].data, df->num_rows * get_column_element_size(df->columns[i].type));
+        if (!add_column(sorted_df, df->column_names[i], df->columns[i].type, new_data, df->num_rows)) {
+            free(new_data);
+            free_dataframe(sorted_df);
+            return NULL;
+        }
+        free(new_data);
+    }
+
+    // Perform bubble sort
+    for (int i = 0; i < sorted_df->num_rows - 1; i++) {
+        for (int j = 0; j < sorted_df->num_rows - i - 1; j++) {
+            int swap = 0;
+            switch (sorted_df->columns[column_index].type) {
+                case TYPE_INT: {
+                    int a = ((int*)sorted_df->columns[column_index].data)[j];
+                    int b = ((int*)sorted_df->columns[column_index].data)[j + 1];
+                    swap = ascending ? (a > b) : (a < b);
+                    break;
+                }
+                case TYPE_FLOAT: {
+                    float a = ((float*)sorted_df->columns[column_index].data)[j];
+                    float b = ((float*)sorted_df->columns[column_index].data)[j + 1];
+                    swap = ascending ? (a > b) : (a < b);
+                    break;
+                }
+                case TYPE_STRING: {
+                    char *a = ((char**)sorted_df->columns[column_index].data)[j];
+                    char *b = ((char**)sorted_df->columns[column_index].data)[j + 1];
+                    int cmp = strcmp(a, b);
+                    swap = ascending ? (cmp > 0) : (cmp < 0);
+                    break;
+                }
+            }
+
+            if (swap) {
+                // Swap elements in all columns
+                for (int k = 0; k < sorted_df->num_columns; k++) {
+                    void *temp = malloc(get_column_element_size(sorted_df->columns[k].type));
+                    if (temp == NULL) {
+                        set_error("Memory allocation failed during sorting");
+                        free_dataframe(sorted_df);
+                        return NULL;
+                    }
+                    memcpy(temp, (char*)sorted_df->columns[k].data + j * get_column_element_size(sorted_df->columns[k].type),
+                           get_column_element_size(sorted_df->columns[k].type));
+                    memcpy((char*)sorted_df->columns[k].data + j * get_column_element_size(sorted_df->columns[k].type),
+                           (char*)sorted_df->columns[k].data + (j + 1) * get_column_element_size(sorted_df->columns[k].type),
+                           get_column_element_size(sorted_df->columns[k].type));
+                    memcpy((char*)sorted_df->columns[k].data + (j + 1) * get_column_element_size(sorted_df->columns[k].type),
+                           temp, get_column_element_size(sorted_df->columns[k].type));
+                    free(temp);
+                }
+            }
+        }
+    }
+
+    return sorted_df;
+}

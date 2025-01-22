@@ -62,6 +62,7 @@ DataFrame* append_dataframe(DataFrame *df1, DataFrame *df2);
 int write_csv(DataFrame *df, const char *filename);
 int* shape_df(DataFrame *df);
 DataFrame* get_dataframe_range(DataFrame *df, int start_row, int end_row);
+DataFrame* sort_dataframe(DataFrame *df, int column_index, int ascending);
 
 size_t get_column_element_size(ColumnType type);
 
