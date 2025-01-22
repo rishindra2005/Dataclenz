@@ -191,7 +191,43 @@ void print_dataframe(DataFrame *df) {
     }
 }
 
+DataFrame* get_dataframe_range(DataFrame *df, int start_row, int end_row) {
+    if (df == NULL || start_row < 0 || end_row >= df->num_rows || start_row > end_row) {
+        set_error("Invalid input parameters for get_dataframe_range");
+        return NULL;
+    }
 
+    DataFrame *result = create_dataframe();
+    if (result == NULL) {
+        set_error("Failed to create new DataFrame in get_dataframe_range");
+        return NULL;
+    }
+
+    int num_rows = end_row - start_row + 1;
+
+    for (int i = 0; i < df->num_columns; i++) {
+        void *new_data = malloc(num_rows * get_column_element_size(df->columns[i].type));
+        if (new_data == NULL) {
+            set_error("Memory allocation failed in get_dataframe_range");
+            free_dataframe(result);
+            return NULL;
+        }
+
+        size_t elem_size = get_column_element_size(df->columns[i].type);
+        memcpy(new_data, (char*)df->columns[i].data + start_row * elem_size, num_rows * elem_size);
+
+        if (!add_column(result, df->column_names[i], df->columns[i].type, new_data, num_rows)) {
+            set_error("Failed to add column in get_dataframe_range");
+            free(new_data);
+            free_dataframe(result);
+            return NULL;
+        }
+
+        free(new_data);
+    }
+
+    return result;
+}
 
 
 int* shape_df(DataFrame *df) {

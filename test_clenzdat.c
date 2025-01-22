@@ -212,14 +212,49 @@ void test_large_dataframe() {
     free(string_data);
 }
 
+void test_get_dataframe_range() {
+    printf("\nTesting get_dataframe_range()...\n");
+    DataFrame *df = create_dataframe();
+    if (df == NULL) {
+        printf("Failed to create DataFrame.\n");
+        return;
+    }
 
+    int int_data[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    float float_data[] = {1.1f, 2.2f, 3.3f, 4.4f, 5.5f, 6.6f, 7.7f, 8.8f, 9.9f, 10.10f};
+    char *string_data[] = {"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"};
+
+    add_column(df, "Int Column", TYPE_INT, int_data, 10);
+    add_column(df, "Float Column", TYPE_FLOAT, float_data, 10);
+    add_column(df, "String Column", TYPE_STRING, string_data, 10);
+
+    printf("Original DataFrame:\n");
+    print_dataframe(df);
+
+    DataFrame *range_df = get_dataframe_range(df, 2, 6);
+    if (range_df != NULL) {
+        printf("\nDataFrame range (rows 2-6):\n");
+        print_dataframe(range_df);
+
+        int *shape = shape_df(range_df);
+        printf("\nRange DataFrame shape: (%d, %d)\n", shape[0], shape[1]);
+
+        free_dataframe(range_df);
+    } else {
+        printf("Failed to get DataFrame range.\n");
+    }
+
+    free_dataframe(df);
+}
 int main() {
     test_create_dataframe();
     test_add_column();
     test_get_column_as_array();
     test_append_dataframe();
     test_large_dataframe();
+    test_get_dataframe_range();  // Add this line
     return 0;
 }
+
 
 
