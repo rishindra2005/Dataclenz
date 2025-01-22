@@ -168,12 +168,57 @@ void test_append_dataframe() {
     free_dataframe(df1);
     free_dataframe(df2);
 }
+void test_large_dataframe() {
+    printf("Testing large DataFrame (>30 rows)...\n");
+    DataFrame *df = create_dataframe();
+    if (df == NULL) {
+        printf("Failed to create DataFrame.\n");
+        return;
+    }
+
+    // Create large arrays for each column type
+    int *int_data = malloc(50 * sizeof(int));
+    float *float_data = malloc(50 * sizeof(float));
+    char **string_data = malloc(50 * sizeof(char*));
+
+    for (int i = 0; i < 50; i++) {
+        int_data[i] = i + 1;
+        float_data[i] = (float)(i + 1) / 2.0f;
+        char *str = malloc(20 * sizeof(char));
+        snprintf(str, 20, "Row_%d", i + 1);
+        string_data[i] = str;
+    }
+
+    // Add columns to the DataFrame
+    add_column(df, "Int Column", TYPE_INT, int_data, 50);
+    add_column(df, "Float Column", TYPE_FLOAT, float_data, 50);
+    add_column(df, "String Column", TYPE_STRING, string_data, 50);
+
+    // Print the DataFrame
+    printf("\nLarge DataFrame (50 rows):\n");
+    print_dataframe(df);
+
+    // Print shape information
+    int *shape = shape_df(df);
+    printf("\nDataFrame shape: (%d, %d)\n", shape[0], shape[1]);
+
+    // Clean up
+    free_dataframe(df);
+    free(int_data);
+    free(float_data);
+    for (int i = 0; i < 50; i++) {
+        free(string_data[i]);
+    }
+    free(string_data);
+}
+
 
 int main() {
     test_create_dataframe();
     test_add_column();
     test_get_column_as_array();
     test_append_dataframe();
+    test_large_dataframe();
     return 0;
 }
 

@@ -90,9 +90,11 @@ void print_dataframe(DataFrame *df) {
     }
 
     // Calculate column widths
-    int col_widths[MAX_COLUMNS] = {0};
+    int col_widths[MAX_COLUMNS + 1] = {0};  // +1 for serial number column
+    col_widths[0] = snprintf(NULL, 0, "%d", df->num_rows);  // Width for serial number
+    col_widths[0] = col_widths[0] < 6 ? 6 : col_widths[0];  // Limit to 6 characters
     for (int i = 0; i < df->num_columns; i++) {
-        col_widths[i] = strlen(df->column_names[i]);
+        col_widths[i + 1] = strlen(df->column_names[i]);
         for (int row = 0; row < df->num_rows; row++) {
             char buffer[64];
             int len = 0;
@@ -107,47 +109,68 @@ void print_dataframe(DataFrame *df) {
                     len = strlen(((char**)df->columns[i].data)[row]);
                     break;
             }
-            if (len > col_widths[i]) col_widths[i] = len;
+            if (len > col_widths[i + 1]) col_widths[i + 1] = len;
         }
+        col_widths[i + 1] = col_widths[i + 1] < 6 ? 6 : col_widths[i + 1];  // Limit to 6 characters
         // Limit column width to 25 characters
-        if (col_widths[i] > 25) col_widths[i] = 25;
+        if (col_widths[i + 1] > 25) col_widths[i + 1] = 25;
     }
 
+    // Determine how many rows to print
+    int rows_to_print = df->num_rows;
+    int print_ellipsis = 0;
+    if (df->num_rows > 30) {
+        rows_to_print = 20;  // 10 from start, 10 from end
+        print_ellipsis = 1;
+    }
     // Print top border
-    for (int i = 0; i < df->num_columns; i++) {
+    for (int i = 0; i <= df->num_columns; i++) {
         printf("+%.*s", col_widths[i] + 2, "------------------------------------");
     }
     printf("+\n");
 
     // Print column names
+    printf("| %-*s ", col_widths[0], "S.No");
     for (int i = 0; i < df->num_columns; i++) {
-        printf("| %-*.*s ", col_widths[i], col_widths[i], df->column_names[i]);
+        printf("| %-*.*s ", col_widths[i + 1], col_widths[i + 1], df->column_names[i]);
     }
     printf("|\n");
 
     // Print separator
-    for (int i = 0; i < df->num_columns; i++) {
+    for (int i = 0; i <= df->num_columns; i++) {
         printf("+%.*s", col_widths[i] + 2, "------------------------------------");
     }
     printf("+\n");
 
     // Print data
-    for (int row = 0; row < df->num_rows; row++) {
+    for (int row = 0; row < rows_to_print; row++) {
+        int actual_row = row < 10 ? row : df->num_rows - (20 - row);
+
+        if (print_ellipsis && row == 10) {
+            printf("| %-*s ", col_widths[0], "...");
+            for (int col = 0; col < df->num_columns; col++) {
+                printf("| %-*s ", col_widths[col + 1], "...");
+            }
+            printf("|\n");
+            continue;
+        }
+
+        printf("| %-*d ", col_widths[0], actual_row + 1);  // Print serial number
         for (int col = 0; col < df->num_columns; col++) {
             printf("| ");
             switch (df->columns[col].type) {
                 case TYPE_INT:
-                    printf("%-*d ", col_widths[col], ((int*)df->columns[col].data)[row]);
+                    printf("%-*d ", col_widths[col + 1], ((int*)df->columns[col].data)[actual_row]);
                     break;
                 case TYPE_FLOAT:
-                    printf("%-*.2f ", col_widths[col], ((float*)df->columns[col].data)[row]);
+                    printf("%-*.2f ", col_widths[col + 1], ((float*)df->columns[col].data)[actual_row]);
                     break;
                 case TYPE_STRING: {
-                    char *str = ((char**)df->columns[col].data)[row];
-                    if (strlen(str) > col_widths[col]) {
-                        printf("%-.*s... ", col_widths[col] - 3, str);
+                    char *str = ((char**)df->columns[col].data)[actual_row];
+                    if (strlen(str) > col_widths[col + 1]) {
+                        printf("%-.*s... ", col_widths[col + 1] - 3, str);
                     } else {
-                        printf("%-*s ", col_widths[col], str);
+                        printf("%-*s ", col_widths[col + 1], str);
                     }
                     break;
                 }
@@ -157,11 +180,17 @@ void print_dataframe(DataFrame *df) {
     }
 
     // Print bottom border
-    for (int i = 0; i < df->num_columns; i++) {
+    for (int i = 0; i <= df->num_columns; i++) {
         printf("+%.*s", col_widths[i] + 2, "------------------------------------");
     }
     printf("+\n");
+
+    // Print total number of rows if truncated
+    if (print_ellipsis) {
+        printf("Displayed 20 out of %d rows\n", df->num_rows);
+    }
 }
+
 
 
 
