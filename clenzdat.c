@@ -119,10 +119,11 @@ void print_dataframe(DataFrame *df) {
     // Determine how many rows to print
     int rows_to_print = df->num_rows;
     int print_ellipsis = 0;
-    if (df->num_rows > 30) {
+    if (df->num_rows > 20) {
         rows_to_print = 20;  // 10 from start, 10 from end
         print_ellipsis = 1;
     }
+
     // Print top border
     for (int i = 0; i <= df->num_columns; i++) {
         printf("+%.*s", col_widths[i] + 2, "------------------------------------");
@@ -144,7 +145,7 @@ void print_dataframe(DataFrame *df) {
 
     // Print data
     for (int row = 0; row < rows_to_print; row++) {
-        int actual_row = row < 10 ? row : df->num_rows - (20 - row);
+        int actual_row = row < 10 ? row : df->num_rows - (rows_to_print - row);
 
         if (print_ellipsis && row == 10) {
             printf("| %-*s ", col_widths[0], "...");
@@ -190,6 +191,7 @@ void print_dataframe(DataFrame *df) {
         printf("Displayed 20 out of %d rows\n", df->num_rows);
     }
 }
+
 
 DataFrame* get_dataframe_range(DataFrame *df, int start_row, int end_row) {
     if (df == NULL || start_row < 0 || end_row >= df->num_rows || start_row > end_row) {
