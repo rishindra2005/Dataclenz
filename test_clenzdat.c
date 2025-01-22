@@ -296,9 +296,36 @@ void test_sort_dataframe() {
     } else {
         printf("Failed to sort by Name\n");
     }
-
+    
     // Clean up
     free_dataframe(df);
+}
+void test_read_describe_dataframe() {
+    printf("\nTesting read_describe_dataframe()...\n");
+    DataFrame *df = read_csv("sample_data.csv");
+    if (df == NULL) {
+        printf("Failed to read CSV file.\n");
+        return;
+    }
+    DataFrame *description = describe_dataframe(df);
+    if (description != NULL) {
+        printf("\nDescription of DataFrame:\n");
+        print_dataframe(description);
+        write_csv(description, "description.csv");
+        free_dataframe(description);
+    } else {
+        printf("Failed to generate description.\n");
+    }
+    free_dataframe(df);
+}
+void test(){
+    DataFrame *df = read_csv("sample_data.csv");
+    if (df == NULL) {
+        printf("Failed to read CSV file.\n");
+        return;
+    }
+    printf("\nDescription of DataFrame:\n");
+    print_dataframe(df);
 }
 int main() {
     test_create_dataframe();
@@ -308,9 +335,8 @@ int main() {
     test_large_dataframe();
     test_get_dataframe_range();  
     test_sort_dataframe();
+    test_read_describe_dataframe();
+    test();
 
     return 0;
 }
-
-
-

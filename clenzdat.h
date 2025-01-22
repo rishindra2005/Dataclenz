@@ -7,7 +7,7 @@
 #include <math.h>
 
 #define MAX_COLUMNS 100
-#define MAX_ROWS 10000
+#define MAX_ROWS 100
 #define MAX_STRING_LENGTH 256
 
 typedef enum {
@@ -52,7 +52,9 @@ DataFrame* one_hot_encode(DataFrame *df, int column_index);
 float calculate_mean(float *data, int length);
 float calculate_median(float *data, int length);
 float calculate_mode(float *data, int length);
-
+float calculate_variance(float *data, int length, float mean);
+float calculate_std_deviation(float variance);
+float calculate_quartile(float *data, int length, float percentile);
 // File operations
 // Add these function prototypes
 DataFrame* read_csv(const char *filename);
@@ -63,11 +65,14 @@ int write_csv(DataFrame *df, const char *filename);
 int* shape_df(DataFrame *df);
 DataFrame* get_dataframe_range(DataFrame *df, int start_row, int end_row);
 DataFrame* sort_dataframe(DataFrame *df, int column_index, int ascending);
-
 size_t get_column_element_size(ColumnType type);
+
+// New function prototype
+DataFrame* describe_dataframe(DataFrame *df);
 
 // Error handling
 extern char error_message[256];
 void set_error(const char *format, ...);
 
-#endif 
+#endif
+

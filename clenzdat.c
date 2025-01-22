@@ -245,6 +245,158 @@ int* shape_df(DataFrame *df) {
 
 
 
+// Helper function to count null values
+int count_null_values(void *data, ColumnType type, int length) {
+    int null_count = 0;
+    for (int i = 0; i < length; i++) {
+        switch (type) {
+            case TYPE_INT:
+                if (((int*)data)[i] == 0) null_count++;
+                break;
+            case TYPE_FLOAT:
+                if (((float*)data)[i] == 0.0f) null_count++;
+                break;
+            case TYPE_STRING:
+                if (((char**)data)[i] == NULL || strlen(((char**)data)[i]) == 0) null_count++;
+                break;
+        }
+    }
+    return null_count;
+}
+
+// Helper function to calculate range
+float calculate_range(float *data, int length) {
+    float min = data[0], max = data[0];
+    for (int i = 1; i < length; i++) {
+        if (data[i] < min) min = data[i];
+        if (data[i] > max) max = data[i];
+    }
+    return max - min;
+}
+
+// Helper function to count unique values and their frequencies
+void count_unique_values(char **data, int length, int *unique_count, char ***unique_values, int **frequencies) {
+    *unique_count = 0;
+    *unique_values = malloc(length * sizeof(char*));
+    *frequencies = calloc(length, sizeof(int));
+
+    for (int i = 0; i < length; i++) {
+        int found = 0;
+        for (int j = 0; j < *unique_count; j++) {
+            if (strcmp(data[i], (*unique_values)[j]) == 0) {
+                (*frequencies)[j]++;
+                found = 1;
+                break;
+            }
+        }
+        if (!found) {
+            (*unique_values)[*unique_count] = strdup(data[i]);
+            (*frequencies)[*unique_count] = 1;
+            (*unique_count)++;
+        }
+    }
+}
+
+DataFrame* describe_dataframe(DataFrame *df) {
+    if (!df) {
+        set_error("Invalid DataFrame");
+        return NULL;
+    }
+
+    DataFrame *desc_df = create_dataframe();
+    if (!desc_df) {
+        set_error("Failed to create description DataFrame");
+        return NULL;
+    }
+
+    // Add statistic names as the first column
+    const char *stat_names[] = {"count", "null_count", "mean", "median", "mode", "min", "25%", "50%", "75%", "max", "range", "variance", "std_dev"};
+    int num_stats = sizeof(stat_names) / sizeof(stat_names[0]);
+    char **stat_names_column = malloc(num_stats * sizeof(char*));
+    for (int i = 0; i < num_stats; i++) {
+        stat_names_column[i] = strdup(stat_names[i]);
+    }
+    add_column(desc_df, "Statistic", TYPE_STRING, stat_names_column, num_stats);
+
+    for (int i = 0; i < df->num_columns; i++) {
+        ColumnType type;
+        void *data = get_column_as_array(df, i, &type);
+        int length = df->num_rows;
+
+        char **stats = malloc(num_stats * sizeof(char*));
+        for (int j = 0; j < num_stats; j++) {
+            stats[j] = malloc(MAX_STRING_LENGTH * sizeof(char));
+        }
+
+        int null_count = count_null_values(data, type, length);
+        snprintf(stats[0], MAX_STRING_LENGTH, "%d", length);
+        snprintf(stats[1], MAX_STRING_LENGTH, "%d", null_count);
+
+        if (type == TYPE_INT || type == TYPE_FLOAT) {
+            float *float_data = malloc(length * sizeof(float));
+            for (int j = 0; j < length; j++) {
+                float_data[j] = (type == TYPE_INT) ? ((int*)data)[j] : ((float*)data)[j];
+            }
+
+            float mean = calculate_mean(float_data, length);
+            float median = calculate_median(float_data, length);
+            float mode = calculate_mode(float_data, length);
+            float variance = calculate_variance(float_data, length, mean);
+            float std_dev = calculate_std_deviation(variance);
+            float q25 = calculate_quartile(float_data, length, 0.25);
+            float q50 = calculate_quartile(float_data, length, 0.5);
+            float q75 = calculate_quartile(float_data, length, 0.75);
+            float min = float_data[0], max = float_data[0];
+            for (int j = 1; j < length; j++) {
+                if (float_data[j] < min) min = float_data[j];
+                if (float_data[j] > max) max = float_data[j];
+            }
+            float range = calculate_range(float_data, length);
+
+            snprintf(stats[2], MAX_STRING_LENGTH, "%.2f", mean);
+            snprintf(stats[3], MAX_STRING_LENGTH, "%.2f", median);
+            snprintf(stats[4], MAX_STRING_LENGTH, "%.2f", mode);
+            snprintf(stats[5], MAX_STRING_LENGTH, "%.2f", min);
+            snprintf(stats[6], MAX_STRING_LENGTH, "%.2f", q25);
+            snprintf(stats[7], MAX_STRING_LENGTH, "%.2f", q50);
+            snprintf(stats[8], MAX_STRING_LENGTH, "%.2f", q75);
+            snprintf(stats[9], MAX_STRING_LENGTH, "%.2f", max);
+            snprintf(stats[10], MAX_STRING_LENGTH, "%.2f", range);
+            snprintf(stats[11], MAX_STRING_LENGTH, "%.2f", variance);
+            snprintf(stats[12], MAX_STRING_LENGTH, "%.2f", std_dev);
+
+            free(float_data);
+        } else if (type == TYPE_STRING) {
+            int unique_count;
+            char **unique_values;
+            int *frequencies;
+            count_unique_values((char**)data, length, &unique_count, &unique_values, &frequencies);
+
+            snprintf(stats[2], MAX_STRING_LENGTH, "N/A");
+            snprintf(stats[3], MAX_STRING_LENGTH, "N/A");
+            snprintf(stats[4], MAX_STRING_LENGTH, "%d unique values", unique_count);
+            snprintf(stats[5], MAX_STRING_LENGTH, "N/A");
+            snprintf(stats[6], MAX_STRING_LENGTH, "N/A");
+            snprintf(stats[7], MAX_STRING_LENGTH, "N/A");
+            snprintf(stats[8], MAX_STRING_LENGTH, "N/A");
+            snprintf(stats[9], MAX_STRING_LENGTH, "N/A");
+            snprintf(stats[10], MAX_STRING_LENGTH, "N/A");
+            snprintf(stats[11], MAX_STRING_LENGTH, "N/A");
+            snprintf(stats[12], MAX_STRING_LENGTH, "N/A");
+
+            for (int j = 0; j < unique_count; j++) {
+                free(unique_values[j]);
+            }
+            free(unique_values);
+            free(frequencies);
+        }
+
+        add_column(desc_df, df->column_names[i], TYPE_STRING, stats, num_stats);
+    }
+
+    return desc_df;
+}
+
  #include <math.h>
 
  // Helper function to calculate mean
@@ -330,6 +482,26 @@ float calculate_median(float *data, int length) {
 
      return mode;
  }
+
+
+float calculate_variance(float *data, int length, float mean) {
+    float sum_squared_diff = 0;
+    for (int i = 0; i < length; i++) {
+        float diff = data[i] - mean;
+        sum_squared_diff += diff * diff;
+    }
+    return sum_squared_diff / length;
+}
+
+float calculate_std_deviation(float variance) {
+    return sqrt(variance);
+}
+
+float calculate_quartile(float *data, int length, float percentile) {
+    int index = (int)(percentile * (length - 1));
+    return data[index];
+}
+
 
  // Function to handle missing values
  DataFrame* handle_missing_values(DataFrame *df, int column_index, const char *strategy) {
@@ -990,3 +1162,4 @@ DataFrame* sort_dataframe(DataFrame *df, int column_index, int ascending) {
 
     return sorted_df;
 }
+
