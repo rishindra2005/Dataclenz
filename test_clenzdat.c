@@ -326,6 +326,9 @@ void test(){
     }
     printf("\nDescription of DataFrame:\n");
     print_dataframe(df);
+    printf("read successfully\n");
+    printf("DataFrame shape: (%d, %d)\n", shape_df(df)[0], shape_df(df)[1]);
+    free_dataframe(df);
 }
 int main() {
     test_create_dataframe();

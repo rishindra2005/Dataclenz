@@ -7,7 +7,7 @@
 #include <math.h>
 
 #define MAX_COLUMNS 100
-#define MAX_ROWS 100
+// Remove the MAX_ROWS definition
 #define MAX_STRING_LENGTH 256
 
 typedef enum {
@@ -23,10 +23,11 @@ typedef struct {
 } Column;
 
 typedef struct {
-    Column columns[MAX_COLUMNS];
-    char *column_names[MAX_COLUMNS];
+    Column *columns;  // Change to a pointer
+    char **column_names;  // Change to a pointer to pointers
     int num_columns;
     int num_rows;
+    int max_rows;  // Add this field to keep track of allocated rows
 } DataFrame;
 
 // DataFrame operations
@@ -46,7 +47,6 @@ void print_dataframe(DataFrame *df);
 DataFrame* handle_missing_values(DataFrame *df, int column_index, const char *strategy);
 DataFrame* normalize_column(DataFrame *df, int column_index);
 DataFrame* scale_column(DataFrame *df, int column_index, float min, float max);
-DataFrame* one_hot_encode(DataFrame *df, int column_index);
 
 // Helper function prototypes
 float calculate_mean(float *data, int length);
@@ -69,6 +69,9 @@ size_t get_column_element_size(ColumnType type);
 
 // New function prototype
 DataFrame* describe_dataframe(DataFrame *df);
+
+// Add this new function prototype
+int resize_dataframe(DataFrame *df, int new_size);
 
 // Error handling
 extern char error_message[256];

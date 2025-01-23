@@ -19,20 +19,70 @@ DataFrame* create_dataframe() {
         set_error("Failed to allocate memory for DataFrame");
         return NULL;
     }
+    df->columns = (Column*)malloc(MAX_COLUMNS * sizeof(Column));
+    df->column_names = (char**)malloc(MAX_COLUMNS * sizeof(char*));
+    if (df->columns == NULL || df->column_names == NULL) {
+        set_error("Failed to allocate memory for columns");
+        free(df);
+        return NULL;
+    }
     df->num_columns = 0;
     df->num_rows = 0;
+    df->max_rows = 1000;  // Start with 1000 rows, we'll resize as needed
     return df;
+
 }
+int resize_dataframe(DataFrame *df, int new_size) {
+    if (df == NULL || new_size < 0) {
+        set_error("Invalid DataFrame or size");
+        return 0;
+    }
+
+    for (int i = 0; i < df->num_columns; i++) {
+        size_t elem_size = get_column_element_size(df->columns[i].type);
+        void *new_data = realloc(df->columns[i].data, new_size * elem_size);
+        if (new_data == NULL) {
+            set_error("Memory reallocation failed for column %d", i);
+            return 0;
+        }
+        df->columns[i].data = new_data;
+
+        // If we're increasing the size, initialize new elements
+        if (new_size > df->num_rows) {
+            switch (df->columns[i].type) {
+                case TYPE_INT:
+                    memset((int*)new_data + df->num_rows, 0, (new_size - df->num_rows) * sizeof(int));
+                    break;
+                case TYPE_FLOAT:
+                    for (int j = df->num_rows; j < new_size; j++) {
+                        ((float*)new_data)[j] = 0.0f;
+                    }
+                    break;
+                case TYPE_STRING:
+                    for (int j = df->num_rows; j < new_size; j++) {
+                        ((char**)new_data)[j] = strdup("");
+                    }
+                    break;
+            }
+        }
+    }
+
+    df->num_rows = new_size;
+    return 1;
+}
+
 
 void free_dataframe(DataFrame *df) {
     if (df == NULL) return;
-
     for (int i = 0; i < df->num_columns; i++) {
         free(df->columns[i].data);
         free(df->column_names[i]);
     }
+    free(df->columns);
+    free(df->column_names);
     free(df);
 }
+
 
 int add_column(DataFrame *df, const char *name, ColumnType type, void *data, int length) {
     if (df == NULL) {
@@ -167,14 +217,16 @@ void print_dataframe(DataFrame *df) {
                     printf("%-*.2f ", col_widths[col + 1], ((float*)df->columns[col].data)[actual_row]);
                     break;
                 case TYPE_STRING: {
-                    char *str = ((char**)df->columns[col].data)[actual_row];
-                    if (strlen(str) > col_widths[col + 1]) {
-                        printf("%-.*s... ", col_widths[col + 1] - 3, str);
-                    } else {
-                        printf("%-*s ", col_widths[col + 1], str);
-                    }
-                    break;
+                char *str = ((char**)df->columns[col].data)[actual_row];
+                if (str == NULL || strlen(str) == 0) {
+                    printf("%-*s ", col_widths[col + 1], "N/A");
+                } else if (strlen(str) > col_widths[col + 1]) {
+                    printf("%-.*s... ", col_widths[col + 1] - 3, str);
+                } else {
+                    printf("%-*s ", col_widths[col + 1], str);
                 }
+                break;
+            }
             }
         }
         printf("|\n");
@@ -665,82 +717,6 @@ DataFrame* scale_column(DataFrame *df, int column_index, float new_min, float ne
     return new_df;
 }
 
-DataFrame* one_hot_encode(DataFrame *df, int column_index) {
-    if (df == NULL || column_index < 0 || column_index >= df->num_columns) {
-        set_error("Invalid DataFrame or column index");
-        return NULL;
-    }
-
-    Column *column = &df->columns[column_index];
-    if (column->type != TYPE_STRING) {
-        set_error("One-hot encoding is only applicable to string columns");
-        return NULL;
-    }
-
-    // Count unique values
-    char *unique_values[MAX_ROWS];
-    int unique_count = 0;
-
-    for (int i = 0; i < df->num_rows; i++) {
-        char *value = ((char**)column->data)[i];
-        int is_unique = 1;
-        for (int j = 0; j < unique_count; j++) {
-            if (strcmp(value, unique_values[j]) == 0) {
-                is_unique = 0;
-                break;
-            }
-        }
-        if (is_unique) {
-            unique_values[unique_count++] = value;
-        }
-    }
-
-    // Create a new DataFrame
-    DataFrame *new_df = create_dataframe();
-    if (new_df == NULL) {
-        set_error("Failed to create new DataFrame for one-hot encoding");
-        return NULL;
-    }
-
-    // Copy existing columns
-    for (int i = 0; i < df->num_columns; i++) {
-        if (i != column_index) {
-            if (!add_column(new_df, df->column_names[i], df->columns[i].type, df->columns[i].data, df->num_rows)) {
-                free_dataframe(new_df);
-                return NULL;
-            }
-        }
-    }
-
-    // Create new columns for one-hot encoding
-    for (int i = 0; i < unique_count; i++) {
-        char new_column_name[MAX_STRING_LENGTH];
-        snprintf(new_column_name, MAX_STRING_LENGTH, "%s_%s", df->column_names[column_index], unique_values[i]);
-
-        int *new_column_data = calloc(df->num_rows, sizeof(int));
-        if (new_column_data == NULL) {
-            set_error("Memory allocation failed for one-hot encoded column");
-            free_dataframe(new_df);
-            return NULL;
-        }
-
-        for (int j = 0; j < df->num_rows; j++) {
-            if (strcmp(((char**)column->data)[j], unique_values[i]) == 0) {
-                new_column_data[j] = 1;
-            }
-        }
-
-        if (!add_column(new_df, new_column_name, TYPE_INT, new_column_data, df->num_rows)) {
-            free(new_column_data);
-            free_dataframe(new_df);
-            return NULL;
-        }
-        free(new_column_data);
-    }
-
-    return new_df;
-}
-
 
 
 DataFrame* label_encode(DataFrame *df, const char *column_name) {
@@ -833,8 +809,9 @@ DataFrame* read_csv(const char *filename) {
     char *token;
     char *headers[MAX_COLUMNS];
     int num_columns = 0;
-    char *data[MAX_ROWS][MAX_COLUMNS];
+    char **data = NULL;
     int num_rows = 0;
+    int capacity = 1000;  // Initial capacity
 
     // Read headers
     if (fgets(line, sizeof(line), file) == NULL) {
@@ -849,9 +826,6 @@ DataFrame* read_csv(const char *filename) {
         headers[num_columns] = strdup(token);
         if (headers[num_columns] == NULL) {
             set_error("Memory allocation failed for header: %s", token);
-            for (int i = 0; i < num_columns; i++) {
-                free(headers[i]);
-            }
             free_dataframe(df);
             fclose(file);
             return NULL;
@@ -860,84 +834,125 @@ DataFrame* read_csv(const char *filename) {
         token = strtok(NULL, ",\n");
     }
 
-    if (num_columns == 0) {
-        set_error("No columns found in file: %s", filename);
+    // Allocate initial memory for data
+    data = (char **)malloc(capacity * sizeof(char *));
+    if (data == NULL) {
+        set_error("Memory allocation failed for data");
         free_dataframe(df);
         fclose(file);
         return NULL;
     }
 
     // Read data
-    while (fgets(line, sizeof(line), file) != NULL && num_rows < MAX_ROWS) {
-        token = strtok(line, ",\n");
-        int col = 0;
-        while (token != NULL && col < num_columns) {
-            data[num_rows][col] = strdup(token);
-            if (data[num_rows][col] == NULL) {
-                set_error("Memory allocation failed for data: row %d, column %d", num_rows + 1, col + 1);
-                for (int i = 0; i < num_rows; i++) {
-                    for (int j = 0; j < num_columns; j++) {
-                        free(data[i][j]);
-                    }
-                }
-                for (int i = 0; i < num_columns; i++) {
-                    free(headers[i]);
-                }
+    while (fgets(line, sizeof(line), file) != NULL) {
+        if (num_rows >= capacity) {
+            capacity *= 2;
+            data = (char **)realloc(data, capacity * sizeof(char *));
+            if (data == NULL) {
+                set_error("Memory reallocation failed for data");
                 free_dataframe(df);
                 fclose(file);
                 return NULL;
             }
-            col++;
-            token = strtok(NULL, ",\n");
         }
-        if (col != num_columns) {
-            set_error("Inconsistent number of columns in row %d", num_rows + 1);
-            for (int i = 0; i <= num_rows; i++) {
-                for (int j = 0; j < num_columns; j++) {
-                    free(data[i][j]);
-                }
-            }
-            for (int i = 0; i < num_columns; i++) {
-                free(headers[i]);
-            }
-            free_dataframe(df);
-            fclose(file);
-            return NULL;
-        }
-        num_rows++;
+        data[num_rows] = strdup(line);
+    if (data[num_rows] == NULL) {
+        set_error("Memory allocation failed for row: %d", num_rows);
+        free_dataframe(df);
+        fclose(file);
+        return NULL;
+    }
+    num_rows++;
     }
 
     fclose(file);
-
 
     if (num_rows == 0) {
         set_error("No data rows found in file: %s", filename);
         for (int i = 0; i < num_columns; i++) {
             free(headers[i]);
         }
+        free(data);
+        free_dataframe(df);
+        return NULL;
+    }
+
+        // Resize the DataFrame to accommodate all rows
+    if (!resize_dataframe(df, num_rows)) {
+        set_error("Failed to resize DataFrame");
+        for (int i = 0; i < num_rows; i++) {
+            free(data[i]);
+        }
+        free(data);
         free_dataframe(df);
         return NULL;
     }
 
     // Add columns using the new function
     for (int i = 0; i < num_columns; i++) {
-        char *column_data[MAX_ROWS];
-        for (int j = 0; j < num_rows; j++) {
-            column_data[j] = data[j][i];
-        }
-        if (!add_column_from_strings(df, headers[i], column_data, num_rows)) {
-            set_error("Failed to add column: %s", headers[i]);
+        char **column_data = malloc(num_rows * sizeof(char*));
+        if (column_data == NULL) {
+            set_error("Memory allocation failed for column data");
             for (int j = 0; j < num_rows; j++) {
-                for (int k = 0; k < num_columns; k++) {
-                    free(data[j][k]);
-                }
+                free(data[j]);
             }
+            free(data);
             for (int j = 0; j < num_columns; j++) {
                 free(headers[j]);
             }
             free_dataframe(df);
             return NULL;
         }
+        
+        for (int j = 0; j < num_rows; j++) {
+            char *line = data[j];
+            for (int k = 0; k < i; k++) {
+                line = strchr(line, ',');
+                if (line == NULL) {
+                    column_data[j] = strdup("");
+                    break;
+                }
+                line++; // Move past the comma
+            }
+            
+            if (line != NULL) {
+                char *end = strchr(line, ',');
+                if (end == NULL) {
+                    end = line + strlen(line);
+                }
+                int len = end - line;
+                column_data[j] = malloc(len + 1);
+                if (column_data[j] == NULL) {
+                    column_data[j] = strdup("");
+                } else {
+                    strncpy(column_data[j], line, len);
+                    column_data[j][len] = '\0';
+                }
+            } else {
+                column_data[j] = strdup("");
+            }
+        }
+
+        if (!add_column_from_strings(df, headers[i], column_data, num_rows)) {
+            set_error("Failed to add column: %s", headers[i]);
+            for (int j = 0; j < num_rows; j++) {
+                free(column_data[j]);
+            }
+            free(column_data);
+            for (int j = 0; j < num_rows; j++) {
+                free(data[j]);
+            }
+            free(data);
+            for (int j = 0; j < num_columns; j++) {
+                free(headers[j]);
+            }
+            free_dataframe(df);
+            return NULL;
+        }
+        for (int j = 0; j < num_rows; j++) {
+            free(column_data[j]);
+        }
+        free(column_data);
     }
 
     // Clean up
@@ -945,10 +960,9 @@ DataFrame* read_csv(const char *filename) {
         free(headers[i]);
     }
     for (int i = 0; i < num_rows; i++) {
-        for (int j = 0; j < num_columns; j++) {
-            free(data[i][j]);
-        }
+        free(data[i]);
     }
+    free(data);
 
     return df;
 }
