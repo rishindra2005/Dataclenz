@@ -1,14 +1,14 @@
 Statistic,Name,Age,Salary,Department
 count,27,27,27,27
 null_count,0,0,0,0
-mean,N/A,N/A,N/A,N/A
-median,N/A,N/A,N/A,N/A
-mode,22 unique values,27 unique values,11 unique values,17 unique values
-min,N/A,N/A,N/A,N/A
-25%,N/A,N/A,N/A,N/A
-50%,N/A,N/A,N/A,N/A
-75%,N/A,N/A,N/A,N/A
-max,N/A,N/A,N/A,N/A
-range,N/A,N/A,N/A,N/A
-variance,N/A,N/A,N/A,N/A
-std_dev,N/A,N/A,N/A,N/A
+mean,N/A,32.74,56481.48,N/A
+median,N/A,32.00,56000.00,N/A
+mode,18 unique values,30.00,50000.00,6 unique values
+min,N/A,27.00,45000.00,N/A
+25%,N/A,33.00,58000.00,N/A
+50%,N/A,40.00,70000.00,N/A
+75%,N/A,30.00,50000.00,N/A
+max,N/A,40.00,70000.00,N/A
+range,N/A,13.00,25000.00,N/A
+variance,N/A,15.90,53879288.00,N/A
+std_dev,N/A,3.99,7340.25,N/A

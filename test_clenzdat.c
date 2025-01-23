@@ -1,18 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+
 #include "clenzdat.h"
 
-void test_create_dataframe() {
-    printf("Testing create_dataframe()...\n");
-    DataFrame *df = create_dataframe();
-    if (df != NULL) {
-        printf("DataFrame created successfully.\n");
-        free_dataframe(df);
-    } else {
-        printf("Failed to create DataFrame.\n");
-    }
-}
 
 void test_add_column() {
     printf("\nTesting add_column()...\n");
@@ -319,19 +311,33 @@ void test_read_describe_dataframe() {
     free_dataframe(df);
 }
 void test(){
-    DataFrame *df = read_csv("sample_data.csv");
+    clock_t start, end;
+    double cpu_time_used;
+    start = clock();
+    DataFrame *df = read_csv("customers-100000.csv");
     if (df == NULL) {
         printf("Failed to read CSV file.\n");
         return;
     }
+    end = clock();
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    printf("Reading time: %f seconds\n", cpu_time_used);
     printf("\nDescription of DataFrame:\n");
     print_dataframe(df);
     printf("read successfully\n");
     printf("DataFrame shape: (%d, %d)\n", shape_df(df)[0], shape_df(df)[1]);
+    
+    // Save DataFrame to txt file
+    if (print_dataframe_s(df, "dataframe_output.txt")) {
+        printf("DataFrame saved to dataframe_output.txt\n");
+    } else {
+        printf("Failed to save DataFrame to txt file\n");
+    }
+    printf("Reading time: %f seconds\n", cpu_time_used);
+
     free_dataframe(df);
 }
 int main() {
-    test_create_dataframe();
     test_add_column();
     test_get_column_as_array();
     test_append_dataframe();

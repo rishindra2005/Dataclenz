@@ -890,48 +890,47 @@ DataFrame* read_csv(const char *filename) {
 
     // Add columns using the new function
     for (int i = 0; i < num_columns; i++) {
-        char **column_data = malloc(num_rows * sizeof(char*));
-        if (column_data == NULL) {
-            set_error("Memory allocation failed for column data");
-            for (int j = 0; j < num_rows; j++) {
-                free(data[j]);
+    char **column_data = malloc(num_rows * sizeof(char*));
+    if (column_data == NULL) {
+        set_error("Memory allocation failed for column data");
+        // ... (error handling code remains the same)
+    }
+    
+    for (int j = 0; j < num_rows; j++) {
+        char *line = data[j];
+        for (int k = 0; k < i; k++) {
+            line = strchr(line, ',');
+            if (line == NULL) {
+                column_data[j] = strdup("");
+                break;
             }
-            free(data);
-            for (int j = 0; j < num_columns; j++) {
-                free(headers[j]);
-            }
-            free_dataframe(df);
-            return NULL;
+            line++; // Move past the comma
         }
         
-        for (int j = 0; j < num_rows; j++) {
-            char *line = data[j];
-            for (int k = 0; k < i; k++) {
-                line = strchr(line, ',');
-                if (line == NULL) {
-                    column_data[j] = strdup("");
-                    break;
+        if (line != NULL) {
+            char *end = strchr(line, ',');
+            if (end == NULL) {
+                end = line + strlen(line);
+                // Remove newline character if it's the last column
+                if (end > line && (*(end-1) == '\n' || *(end-1) == '\r')) {
+                    end--;
                 }
-                line++; // Move past the comma
+                if (end > line && (*(end-1) == '\n' || *(end-1) == '\r')) {
+                    end--;
+                }
             }
-            
-            if (line != NULL) {
-                char *end = strchr(line, ',');
-                if (end == NULL) {
-                    end = line + strlen(line);
-                }
-                int len = end - line;
-                column_data[j] = malloc(len + 1);
-                if (column_data[j] == NULL) {
-                    column_data[j] = strdup("");
-                } else {
-                    strncpy(column_data[j], line, len);
-                    column_data[j][len] = '\0';
-                }
-            } else {
+            int len = end - line;
+            column_data[j] = malloc(len + 1);
+            if (column_data[j] == NULL) {
                 column_data[j] = strdup("");
+            } else {
+                strncpy(column_data[j], line, len);
+                column_data[j][len] = '\0';
             }
+        } else {
+            column_data[j] = strdup("");
         }
+    }
 
         if (!add_column_from_strings(df, headers[i], column_data, num_rows)) {
             set_error("Failed to add column: %s", headers[i]);
@@ -967,7 +966,77 @@ DataFrame* read_csv(const char *filename) {
     return df;
 }
 
+int print_dataframe_s(DataFrame *df, const char *filename) {
+    if (df == NULL || filename == NULL) {
+        set_error("Invalid DataFrame or filename");
+        return 0;
+    }
 
+    FILE *file = fopen(filename, "w");
+    if (file == NULL) {
+        set_error("Unable to open file for writing");
+        return 0;
+    }
+
+    // Calculate column widths
+    int col_widths[MAX_COLUMNS + 1] = {0};  // +1 for serial number column
+    col_widths[0] = snprintf(NULL, 0, "%d", df->num_rows);
+    col_widths[0] = col_widths[0] < 6 ? 6 : col_widths[0];  // Minimum width of 6 for S.No
+    for (int i = 0; i < df->num_columns; i++) {
+        col_widths[i + 1] = strlen(df->column_names[i]);
+        for (int row = 0; row < df->num_rows; row++) {
+            char buffer[64];
+            int len = 0;
+            switch (df->columns[i].type) {
+                case TYPE_INT:
+                    len = snprintf(buffer, sizeof(buffer), "%d", ((int*)df->columns[i].data)[row]);
+                    break;
+                case TYPE_FLOAT:
+                    len = snprintf(buffer, sizeof(buffer), "%.2f", ((float*)df->columns[i].data)[row]);
+                    break;
+                case TYPE_STRING:
+                    len = strlen(((char**)df->columns[i].data)[row]);
+                    break;
+            }
+            if (len > col_widths[i + 1]) col_widths[i + 1] = len;
+        }
+    }
+
+    // Print header
+    fprintf(file, "| %-*s ", col_widths[0], "S.No");
+    for (int i = 0; i < df->num_columns; i++) {
+        fprintf(file, "| %-*s ", col_widths[i + 1], df->column_names[i]);
+    }
+    fprintf(file, "|\n");
+
+    // Print separator
+    for (int i = 0; i <= df->num_columns; i++) {
+        fprintf(file, "+%.*s", col_widths[i] + 2, "------------------------------------");
+    }
+    fprintf(file, "+\n");
+
+    // Print data
+    for (int row = 0; row < df->num_rows; row++) {
+        fprintf(file, "| %-*d ", col_widths[0], row + 1);
+        for (int col = 0; col < df->num_columns; col++) {
+            switch (df->columns[col].type) {
+                case TYPE_INT:
+                    fprintf(file, "| %-*d ", col_widths[col + 1], ((int*)df->columns[col].data)[row]);
+                    break;
+                case TYPE_FLOAT:
+                    fprintf(file, "| %-*.2f ", col_widths[col + 1], ((float*)df->columns[col].data)[row]);
+                    break;
+                case TYPE_STRING:
+                    fprintf(file, "| %-*s ", col_widths[col + 1], ((char**)df->columns[col].data)[row]);
+                    break;
+            }
+        }
+        fprintf(file, "|\n");
+    }
+
+    fclose(file);
+    return 1;
+}
 
 int write_csv(DataFrame *df, const char *filename) {
     if (df == NULL) {

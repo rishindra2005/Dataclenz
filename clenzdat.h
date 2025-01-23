@@ -69,6 +69,7 @@ size_t get_column_element_size(ColumnType type);
 
 // New function prototype
 DataFrame* describe_dataframe(DataFrame *df);
+int print_dataframe_s(DataFrame *df, const char *filename);
 
 // Add this new function prototype
 int resize_dataframe(DataFrame *df, int new_size);
