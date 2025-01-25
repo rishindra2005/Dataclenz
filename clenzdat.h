@@ -28,7 +28,11 @@ typedef struct {
     int num_rows;
     int max_rows;  // Add this field to keep track of allocated rows
 } DataFrame;
-
+typedef struct {
+    float *coefficients;
+    float intercept;
+    int num_features;
+} LinearRegressionModel;
 // DataFrame operations
 DataFrame* create_dataframe();
 void free_dataframe(DataFrame *df);
@@ -81,11 +85,7 @@ int resize_dataframe(DataFrame *df, int new_size);
 DataFrame* split_dataframe(DataFrame* df, const char* target_column, void** y);
 // Add these function declarations   Linear regression functions
 
-typedef struct {
-    float *coefficients;
-    float intercept;
-    int num_features;
-} LinearRegressionModel;
+
 
 LinearRegressionModel* create_linear_regression_model(int num_features);
 void free_linear_regression_model(LinearRegressionModel *model);

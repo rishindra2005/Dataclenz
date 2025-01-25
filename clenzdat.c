@@ -4,6 +4,7 @@
 #include <float.h>
 #include <limits.h>
 
+
 #define NULL_INT INT_MIN
 #define NULL_FLOAT NAN
 
@@ -1771,7 +1772,72 @@ DataFrame* split_dataframe(DataFrame* df, const char* target_column, void** y) {
 }
 
 #include <math.h>
+void matrix_multiply(float *A, float *B, float *C, int m, int n, int p) {
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < p; j++) {
+            C[i*p + j] = 0;
+            for (int k = 0; k < n; k++) {
+                C[i*p + j] += A[i*n + k] * B[k*p + j];
+            }
+        }
+    }
+}
 
+// Helper function for matrix transpose
+void matrix_transpose(float *A, float *AT, int m, int n) {
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+            AT[j*m + i] = A[i*n + j];
+        }
+    }
+}
+
+// Helper function for matrix inversion (using Gauss-Jordan elimination)
+int matrix_inverse(float *A, int n) {
+    float *temp = malloc(n * n * sizeof(float));
+    if (temp == NULL) {
+        return 0;
+    }
+    memcpy(temp, A, n * n * sizeof(float));
+
+    float *identity = calloc(n * n, sizeof(float));
+    if (identity == NULL) {
+        free(temp);
+        return 0;
+    }
+    for (int i = 0; i < n; i++) {
+        identity[i*n + i] = 1.0f;
+    }
+
+    for (int i = 0; i < n; i++) {
+        float pivot = temp[i*n + i];
+        if (fabs(pivot) < 1e-6) {
+            free(temp);
+            free(identity);
+            return 0;  // Matrix is singular
+        }
+
+        for (int j = 0; j < n; j++) {
+            temp[i*n + j] /= pivot;
+            identity[i*n + j] /= pivot;
+        }
+
+        for (int k = 0; k < n; k++) {
+            if (k != i) {
+                float factor = temp[k*n + i];
+                for (int j = 0; j < n; j++) {
+                    temp[k*n + j] -= factor * temp[i*n + j];
+                    identity[k*n + j] -= factor * identity[i*n + j];
+                }
+            }
+        }
+    }
+
+    memcpy(A, identity, n * n * sizeof(float));
+    free(temp);
+    free(identity);
+    return 1;
+}
 LinearRegressionModel* create_linear_regression_model(int num_features) {
     LinearRegressionModel *model = malloc(sizeof(LinearRegressionModel));
     if (model == NULL) {
@@ -1800,37 +1866,82 @@ int fit_linear_regression(LinearRegressionModel *model, DataFrame *X, float *y) 
     }
 
     int n = X->num_rows;
-    float learning_rate = 0.002f;
-    int num_iterations = 100;
+    int m = X->num_columns;
 
-    for (int iter = 0; iter < num_iterations; iter++) {
-        for (int i = 0; i < n; i++) {
-            float prediction = model->intercept;
-            for (int j = 0; j < model->num_features; j++) {
-                float feature_value;
-                if (X->columns[j].type == TYPE_FLOAT) {
-                    feature_value = ((float*)X->columns[j].data)[i];
-                } else if (X->columns[j].type == TYPE_INT) {
-                    feature_value = (float)((int*)X->columns[j].data)[i];
-                } else {
-                    // Skip non-numeric columns
-                    continue;
-                }
-                prediction += model->coefficients[j] * feature_value;
-            }
+    // Allocate memory for X matrix (including bias term)
+    float *X_mat = malloc((n * (m + 1)) * sizeof(float));
+    if (X_mat == NULL) {
+        return 0;
+    }
 
-            float error = prediction - y[i];
-
-            model->intercept -= learning_rate * error;
-            for (int j = 0; j < model->num_features; j++) {
-                if (X->columns[j].type == TYPE_FLOAT || X->columns[j].type == TYPE_INT) {
-                    float feature_value = (X->columns[j].type == TYPE_FLOAT) ?
-                        ((float*)X->columns[j].data)[i] : (float)((int*)X->columns[j].data)[i];
-                    model->coefficients[j] -= learning_rate * error * feature_value;
-                }
-            }
+    // Fill X matrix
+    for (int i = 0; i < n; i++) {
+        X_mat[i * (m + 1)] = 1.0f;  // Bias term
+        for (int j = 0; j < m; j++) {
+            X_mat[i * (m + 1) + j + 1] = ((float*)X->columns[j].data)[i];
         }
     }
+
+    // Allocate memory for intermediate matrices
+    float *XT = malloc((n * (m + 1)) * sizeof(float));
+    float *XTX = malloc(((m + 1) * (m + 1)) * sizeof(float));
+    float *XTy = malloc((m + 1) * sizeof(float));
+
+    if (XT == NULL || XTX == NULL || XTy == NULL) {
+        free(X_mat);
+        free(XT);
+        free(XTX);
+        free(XTy);
+        return 0;
+    }
+
+    // Compute X^T
+    matrix_transpose(X_mat, XT, n, m + 1);
+
+    // Compute X^T * X
+    matrix_multiply(XT, X_mat, XTX, m + 1, n, m + 1);
+
+    // Compute (X^T * X)^-1
+    if (!matrix_inverse(XTX, m + 1)) {
+        free(X_mat);
+        free(XT);
+        free(XTX);
+        free(XTy);
+        return 0;
+    }
+
+    // Compute X^T * y
+    for (int i = 0; i < m + 1; i++) {
+        XTy[i] = 0;
+        for (int j = 0; j < n; j++) {
+            XTy[i] += XT[i*n + j] * y[j];
+        }
+    }
+
+    // Compute (X^T * X)^-1 * (X^T * y)
+    float *coefficients = malloc((m + 1) * sizeof(float));
+    if (coefficients == NULL) {
+        free(X_mat);
+        free(XT);
+        free(XTX);
+        free(XTy);
+        return 0;
+    }
+
+    matrix_multiply(XTX, XTy, coefficients, m + 1, m + 1, 1);
+
+    // Store the results in the model
+    model->intercept = coefficients[0];
+    for (int i = 0; i < m; i++) {
+        model->coefficients[i] = coefficients[i + 1];
+    }
+
+    // Free allocated memory
+    free(X_mat);
+    free(XT);
+    free(XTX);
+    free(XTy);
+    free(coefficients);
 
     return 1;
 }
