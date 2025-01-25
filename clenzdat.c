@@ -1723,3 +1723,164 @@ int print_unique_values(DataFrame *df, int column_index) {
 
     return unique_count;
 }
+
+DataFrame* split_dataframe(DataFrame* df, const char* target_column, void** y) {
+    if (df == NULL || target_column == NULL) {
+        return NULL;
+    }
+
+    int target_col_index = -1;
+    for (int i = 0; i < df->num_columns; i++) {
+        if (strcmp(df->column_names[i], target_column) == 0) {
+            target_col_index = i;
+            break;
+        }
+    }
+
+    if (target_col_index == -1) {
+        printf("Target column '%s' not found in the DataFrame.\n", target_column);
+        return NULL;
+    }
+
+    DataFrame* X = create_dataframe();
+    if (X == NULL) {
+        return NULL;
+    }
+
+    // Copy all columns except the target column to X
+    for (int i = 0; i < df->num_columns; i++) {
+        if (i != target_col_index) {
+            void* column_data = get_column_as_array(df, i, &df->columns[i].type);
+            if (column_data == NULL || !add_column(X, df->column_names[i], df->columns[i].type, column_data, df->num_rows)) {
+                free_dataframe(X);
+                free(column_data);
+                return NULL;
+            }
+            free(column_data);
+        }
+    }
+
+    // Extract the target column as y
+    *y = get_column_as_array(df, target_col_index, &df->columns[target_col_index].type);
+    if (*y == NULL) {
+        free_dataframe(X);
+        return NULL;
+    }
+
+    return X;
+}
+
+#include <math.h>
+
+LinearRegressionModel* create_linear_regression_model(int num_features) {
+    LinearRegressionModel *model = malloc(sizeof(LinearRegressionModel));
+    if (model == NULL) {
+        return NULL;
+    }
+    model->coefficients = calloc(num_features, sizeof(float));
+    if (model->coefficients == NULL) {
+        free(model);
+        return NULL;
+    }
+    model->intercept = 0.0f;
+    model->num_features = num_features;
+    return model;
+}
+
+void free_linear_regression_model(LinearRegressionModel *model) {
+    if (model) {
+        free(model->coefficients);
+        free(model);
+    }
+}
+
+int fit_linear_regression(LinearRegressionModel *model, DataFrame *X, float *y) {
+    if (model == NULL || X == NULL || y == NULL || X->num_columns != model->num_features) {
+        return 0;
+    }
+
+    int n = X->num_rows;
+    float learning_rate = 0.002f;
+    int num_iterations = 100;
+
+    for (int iter = 0; iter < num_iterations; iter++) {
+        for (int i = 0; i < n; i++) {
+            float prediction = model->intercept;
+            for (int j = 0; j < model->num_features; j++) {
+                float feature_value;
+                if (X->columns[j].type == TYPE_FLOAT) {
+                    feature_value = ((float*)X->columns[j].data)[i];
+                } else if (X->columns[j].type == TYPE_INT) {
+                    feature_value = (float)((int*)X->columns[j].data)[i];
+                } else {
+                    // Skip non-numeric columns
+                    continue;
+                }
+                prediction += model->coefficients[j] * feature_value;
+            }
+
+            float error = prediction - y[i];
+
+            model->intercept -= learning_rate * error;
+            for (int j = 0; j < model->num_features; j++) {
+                if (X->columns[j].type == TYPE_FLOAT || X->columns[j].type == TYPE_INT) {
+                    float feature_value = (X->columns[j].type == TYPE_FLOAT) ?
+                        ((float*)X->columns[j].data)[i] : (float)((int*)X->columns[j].data)[i];
+                    model->coefficients[j] -= learning_rate * error * feature_value;
+                }
+            }
+        }
+    }
+
+    return 1;
+}
+
+float* predict_linear_regression(LinearRegressionModel *model, DataFrame *X) {
+    if (model == NULL || X == NULL || X->num_columns != model->num_features) {
+        return NULL;
+    }
+
+    int n = X->num_rows;
+    float *predictions = malloc(n * sizeof(float));
+    if (predictions == NULL) {
+        return NULL;
+    }
+
+    for (int i = 0; i < n; i++) {
+        predictions[i] = model->intercept;
+        for (int j = 0; j < model->num_features; j++) {
+            if (X->columns[j].type == TYPE_FLOAT) {
+                predictions[i] += model->coefficients[j] * ((float*)X->columns[j].data)[i];
+            } else if (X->columns[j].type == TYPE_INT) {
+                predictions[i] += model->coefficients[j] * (float)((int*)X->columns[j].data)[i];
+            }
+        }
+    }
+
+    return predictions;
+}
+
+float calculate_r_squared(float *y_true, float *y_pred, int n) {
+    float mean_y = 0.0f;
+    for (int i = 0; i < n; i++) {
+        mean_y += y_true[i];
+    }
+    mean_y /= n;
+
+    float ss_tot = 0.0f, ss_res = 0.0f;
+    for (int i = 0; i < n; i++) {
+        ss_tot += (y_true[i] - mean_y) * (y_true[i] - mean_y);
+        ss_res += (y_true[i] - y_pred[i]) * (y_true[i] - y_pred[i]);
+    }
+
+    return 1 - (ss_res / ss_tot);
+}
+
+float calculate_mse(float *y_true, float *y_pred, int n) {
+    float mse = 0.0f;
+    for (int i = 0; i < n; i++) {
+        float error = y_true[i] - y_pred[i];
+        mse += error * error;
+    }
+    return mse / n;
+}

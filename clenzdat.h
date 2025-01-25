@@ -78,6 +78,23 @@ int print_dataframe_s(DataFrame *df, const char *filename);
 
 // Add this new function prototype
 int resize_dataframe(DataFrame *df, int new_size);
+DataFrame* split_dataframe(DataFrame* df, const char* target_column, void** y);
+// Add these function declarations   Linear regression functions
+
+typedef struct {
+    float *coefficients;
+    float intercept;
+    int num_features;
+} LinearRegressionModel;
+
+LinearRegressionModel* create_linear_regression_model(int num_features);
+void free_linear_regression_model(LinearRegressionModel *model);
+int fit_linear_regression(LinearRegressionModel *model, DataFrame *X, float *y);
+float* predict_linear_regression(LinearRegressionModel *model, DataFrame *X);
+float calculate_r_squared(float *y_true, float *y_pred, int n);
+float calculate_mse(float *y_true, float *y_pred, int n);
+
+
 
 // Error handling
 extern char error_message[256];
