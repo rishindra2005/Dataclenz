@@ -3,8 +3,8 @@
 #include <string.h>
 #include <time.h>
 
-// #include "clenzdat.h"
-#include <clenzdat.h>
+#include "clenzdat.h"
+// #include <clenzdat.h>
 
 void test_add_column() {
     printf("\nTesting add_column()...\n");
@@ -243,18 +243,47 @@ void test_large_dataframe() {
     float *float_data = malloc(50 * sizeof(float));
     char **string_data = malloc(50 * sizeof(char*));
 
+    if (int_data == NULL || float_data == NULL || string_data == NULL) {
+        printf("Memory allocation failed for data arrays.\n");
+        free(int_data);
+        free(float_data);
+        free(string_data);
+        free_dataframe(df);
+        return;
+    }
+
     for (int i = 0; i < 50; i++) {
         int_data[i] = i + 1;
         float_data[i] = (float)(i + 1) / 2.0f;
         char *str = malloc(20 * sizeof(char));
+        if (str == NULL) {
+            printf("Memory allocation failed for string at index %d.\n", i);
+            // Clean up previously allocated memory
+            for (int j = 0; j < i; j++) {
+                free(string_data[j]);
+            }
+            free(int_data);
+            free(float_data);
+            free(string_data);
+            free_dataframe(df);
+            return;
+        }
         snprintf(str, 20, "Row_%d", i + 1);
         string_data[i] = str;
     }
 
     // Add columns to the DataFrame
-    add_column(df, "Int Column", TYPE_INT, int_data, 50);
-    add_column(df, "Float Column", TYPE_FLOAT, float_data, 50);
-    add_column(df, "String Column", TYPE_STRING, string_data, 50);
+    if (!add_column(df, "Int Column", TYPE_INT, int_data, 50) ||
+        !add_column(df, "Float Column", TYPE_FLOAT, float_data, 50) ||
+        !add_column(df, "String Column", TYPE_STRING, string_data, 50)) {
+        printf("Failed to add columns to DataFrame.\n");
+        // Clean up
+        
+        free(int_data);
+        free(float_data);
+        free_dataframe(df);
+        return;
+    }
 
     // Print the DataFrame
     printf("\nLarge DataFrame (50 rows):\n");
@@ -262,16 +291,27 @@ void test_large_dataframe() {
 
     // Print shape information
     int *shape = shape_df(df);
-    printf("\nDataFrame shape: (%d, %d)\n", shape[0], shape[1]);
+    if (shape != NULL) {
+        printf("\nDataFrame shape: (%d, %d)\n", shape[0], shape[1]);
+        free(shape);
+    } else {
+        printf("Failed to get DataFrame shape.\n");
+    }
+
 
     // Clean up
     free_dataframe(df);
+    printf("Freed DataFrame\n");
+
     free(int_data);
+    printf("Freed int_data\n");
+
     free(float_data);
-    for (int i = 0; i < 50; i++) {
-        free(string_data[i]);
-    }
-    free(string_data);
+    printf("Freed float_data\n");
+
+    
+
+    printf("Test large DataFrame completed successfully\n");
 }
 
 void test_get_dataframe_range() {
@@ -369,6 +409,7 @@ void test_read_describe_dataframe() {
         printf("Failed to read CSV file.\n");
         return;
     }
+    print_dataframe(df);
     DataFrame *description = describe_dataframe(df);
     if (description != NULL) {
         printf("\nDescription of DataFrame:\n");
@@ -384,7 +425,8 @@ void test(){
     clock_t start, end;
     float cpu_time_used;
     start = clock();
-    DataFrame *df = read_csv("sample_data.csv");
+    DataFrame *df = read_csv("customers-100.csv");
+    
     if (df == NULL) {
         printf("Failed to read CSV file.\n");
         return;
@@ -414,16 +456,92 @@ void test(){
     printf("\nAll tests for change_value() completed.\n");
     free_dataframe(df);
 }
+void test_replace_value() {
+    printf("\nTesting replace_value()...\n");
+    DataFrame *df = create_dataframe();
+    if (df == NULL) {
+        printf("Failed to create DataFrame.\n");
+        return;
+    }
+
+    int int_data[] = {1, 2, 3, 2, 5};
+    float float_data[] = {1.1f, 2.2f, 3.3f, 2.2f, 5.5f};
+    char *string_data[] = {"one", "two", "three", "two", "five"};
+
+    add_column(df, "Int Column", TYPE_INT, int_data, 5);
+    add_column(df, "Float Column", TYPE_FLOAT, float_data, 5);
+    add_column(df, "String Column", TYPE_STRING, string_data, 5);
+
+    printf("Original DataFrame:\n");
+    print_dataframe(df);
+    df = read_csv("sample_data.csv");
+    // Replace int value
+    int old_int = 30, new_int = 60;
+    int replaced_int = replace_value(df, 1, &old_int, &new_int);
+    printf("\nReplaced %d occurrences of %d with %d in Int Column\n", replaced_int, old_int, new_int);
+
+    // Replace float value
+    float old_float = 5.5f, new_float = 20.2f;
+    int replaced_float = replace_value(df, 4, &old_float, &new_float);
+    printf("Replaced %d occurrences of %.1f with %.1f in Float Column\n", replaced_float, old_float, new_float);
+
+    // Replace string value
+    char *old_str = "Sales", *new_str = "1";
+    int replaced_str = replace_value(df, 3, old_str, new_str);
+    printf("Replaced %d occurrences of '%s' with '%s' in String Column\n", replaced_str, old_str, new_str);
+
+    printf("\nUpdated DataFrame:\n");
+    print_dataframe(df);
+
+    free_dataframe(df);
+}
+void test_print_unique_values() {
+    printf("\nTesting print_unique_values()...\n");
+    DataFrame *df = create_dataframe();
+    if (df == NULL) {
+        printf("Failed to create DataFrame.\n");
+        return;
+    }
+
+    int int_data[] = {1, 2, 3, 2, 1, 4, 5, 4, 3};
+    float float_data[] = {1.1f, 2.2f, 3.3f, 2.2f, 1.1f, 4.4f, 5.5f, 4.4f, 3.3f};
+    char *string_data[] = {"one", "two", "three", "two", "one", "four", "five", "four", "three"};
+
+    add_column(df, "Int Column", TYPE_INT, int_data, 9);
+    add_column(df, "Float Column", TYPE_FLOAT, float_data, 9);
+    add_column(df, "String Column", TYPE_STRING, string_data, 9);
+
+    printf("Original DataFrame:\n");
+    print_dataframe(df);
+    df = read_csv("sample_data.csv");
+    printf("\nUnique values in each column:\n");
+    int unique_int = print_unique_values(df, 0);
+    int unique_float = print_unique_values(df, 1);
+    int unique_string = print_unique_values(df, 2);
+
+    printf("\nNumber of unique values:\n");
+    printf("Int Column: %d\n", unique_int);
+    printf("Float Column: %d\n", unique_float);
+    printf("String Column: %d\n", unique_string);
+
+    free_dataframe(df);
+}
+
+
 int main() {
     // test_add_column();
     // test_get_column_as_array();
     // test_append_dataframe();
     // test_large_dataframe();
-     test_change_value();
+    // test_change_value();
     // test_get_dataframe_range();  
     // test_sort_dataframe();
     // test_read_describe_dataframe();
-    test();
+    // test_replace_value();  
+    // test_print_unique_values();
+
+    // test();
+
 
     return 0;
 }

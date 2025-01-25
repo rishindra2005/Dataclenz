@@ -1,28 +1,28 @@
-Name,Age,Salary,Department
-John Doe,30,50000,Sales
-Jane Smith,28,55000,Marketing
-Bob Johnson,35,60000,Engineering
-Alice Brown,32,52000,Sales
-Charlie Davis,40,70000,Engineering
-Eva Wilson,27,48000,Marketing
-Frank Miller,33,58000,Sales
-Grace Lee,29,53000,Marketing
-Henry Taylor,38,65000,Engineering
-Ivy Chen,31,56000,Sales
-Alice,30,50000,HR
-Bob,35,60000,IT
-Charlie,28,45000,Marketing
-David,40,70000,Finance
-Eve,32,55000,HR
-Frank,38,65000,IT
-Grace,29,48000,Marketing
-Taylor,33,58000,Finance
-Ivy Chen,31,56000,Sales
-Alice,30,50000,HR
-Bob,35,60000,IT
-Charlie,28,45000,Marketing
-David,40,70000,Finance
-Eve,32,55000,HR
-Frank,38,65000,IT
-Grace,29,48000,Marketing
-Taylor,33,58000,Finance
+Name,Age,Salary,Department,height
+John Doe,30,50000,Sales,5.6
+Jane Smith,28,55000,Marketing,5.7
+Bob Johnson,35,60000,Engineering,5.8
+Alice Brown,32,52000,Sales,5.9
+Charlie Davis,,70000,Engineering,5.4
+Eva Wilson,27,48000,,5.5
+Frank Miller,,58000,Sales,5.5
+Grace Lee,29,53000,Marketing,5.2
+Henry Taylor,38,65000,Engineering,
+Ivy Chen,31,56000,Sales,
+Alice,30,50000,HR,
+Bob,35,60000,IT,
+Charlie,28,45000,Marketing,5.7
+David,40,70000,Finance,5.9
+Eve,32,,HR,
+,38,65000,IT,
+Grace,29,48000,,5.9
+Taylor,,58000,Finance,
+Ivy Chen,31,56000,Sales,6.0
+Alice,30,50000,HR,5.8
+Bob,35,60000,IT,5.7
+Charlie,28,45000,Marketing,5.6
+David,40,,Finance,5.5
+Eve,32,55000,HR,
+Frank,38,65000,IT,5.4
+Grace,29,48000,Marketing,5.3
+,33,60000,,5.2

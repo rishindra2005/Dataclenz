@@ -6,8 +6,7 @@
 #include <string.h>
 #include <math.h>
 
-#define MAX_COLUMNS 100
-// Remove the MAX_ROWS definition
+#define MAX_COLUMNS 1000
 #define MAX_STRING_LENGTH 256
 
 typedef enum {
@@ -57,6 +56,9 @@ float calculate_variance(float *data, int length, float mean);
 float calculate_std_deviation(float variance);
 float calculate_quartile(float *data, int length, float percentile);
 int change_value(DataFrame *df, int row_index, int column_index, void *new_value);
+int replace_value(DataFrame *df, int column_index, void *old_value, void *new_value);
+int print_unique_values(DataFrame *df, int column_index);
+
 
 // File operations
 // Add these function prototypes

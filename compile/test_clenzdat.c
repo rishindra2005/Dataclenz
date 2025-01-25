@@ -364,7 +364,7 @@ void test_sort_dataframe() {
 }
 void test_read_describe_dataframe() {
     printf("\nTesting read_describe_dataframe()...\n");
-    DataFrame *df = read_csv("sample_data.csv");
+    DataFrame *df = read_csv("customers-100.csv");
     if (df == NULL) {
         printf("Failed to read CSV file.\n");
         return;
@@ -422,7 +422,7 @@ int main() {
      test_change_value();
     // test_get_dataframe_range();  
     // test_sort_dataframe();
-    // test_read_describe_dataframe();
+    test_read_describe_dataframe();
     test();
 
     return 0;
