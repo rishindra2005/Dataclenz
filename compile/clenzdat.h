@@ -6,8 +6,7 @@
 #include <string.h>
 #include <math.h>
 
-#define MAX_COLUMNS 100
-// Remove the MAX_ROWS definition
+#define MAX_COLUMNS 1000
 #define MAX_STRING_LENGTH 256
 
 typedef enum {
@@ -29,7 +28,11 @@ typedef struct {
     int num_rows;
     int max_rows;  // Add this field to keep track of allocated rows
 } DataFrame;
-
+typedef struct {
+    float *coefficients;
+    float intercept;
+    int num_features;
+} LinearRegressionModel;
 // DataFrame operations
 DataFrame* create_dataframe();
 void free_dataframe(DataFrame *df);
@@ -57,6 +60,9 @@ float calculate_variance(float *data, int length, float mean);
 float calculate_std_deviation(float variance);
 float calculate_quartile(float *data, int length, float percentile);
 int change_value(DataFrame *df, int row_index, int column_index, void *new_value);
+int replace_value(DataFrame *df, int column_index, void *old_value, void *new_value);
+int print_unique_values(DataFrame *df, int column_index);
+
 
 // File operations
 // Add these function prototypes
@@ -76,6 +82,19 @@ int print_dataframe_s(DataFrame *df, const char *filename);
 
 // Add this new function prototype
 int resize_dataframe(DataFrame *df, int new_size);
+DataFrame* split_dataframe(DataFrame* df, const char* target_column, void** y);
+// Add these function declarations   Linear regression functions
+
+
+
+LinearRegressionModel* create_linear_regression_model(int num_features);
+void free_linear_regression_model(LinearRegressionModel *model);
+int fit_linear_regression(LinearRegressionModel *model, DataFrame *X, float *y);
+float* predict_linear_regression(LinearRegressionModel *model, DataFrame *X);
+float calculate_r_squared(float *y_true, float *y_pred, int n);
+float calculate_mse(float *y_true, float *y_pred, int n);
+
+
 
 // Error handling
 extern char error_message[256];

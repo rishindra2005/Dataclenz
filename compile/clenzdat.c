@@ -2,9 +2,24 @@
 #include <stdarg.h>
 #include <ctype.h>
 #include <float.h>
+#include <limits.h>
+
+
+#define NULL_INT INT_MIN
+#define NULL_FLOAT NAN
+
 char error_message[256] = {0};
 
 
+void debug_log(const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    fprintf(stderr, "[DEBUG] ");
+    vfprintf(stderr, format, args);
+    fprintf(stderr, "\n");
+    va_end(args);
+    fflush(stderr);
+}
 void set_error(const char *format, ...) {
     va_list args;
     va_start(args, format);
@@ -75,6 +90,11 @@ int resize_dataframe(DataFrame *df, int new_size) {
 void free_dataframe(DataFrame *df) {
     if (df == NULL) return;
     for (int i = 0; i < df->num_columns; i++) {
+        if (df->columns[i].type == TYPE_STRING) {
+            for (int j = 0; j < df->num_rows; j++) {
+                free(((char**)df->columns[i].data)[j]);
+            }
+        }
         free(df->columns[i].data);
         free(df->column_names[i]);
     }
@@ -106,12 +126,49 @@ int add_column(DataFrame *df, const char *name, ColumnType type, void *data, int
     switch (type) {
         case TYPE_INT:
             data_size = sizeof(int) * length;
+            df->columns[df->num_columns].data = malloc(data_size);
+            if (df->columns[df->num_columns].data == NULL) {
+                set_error("Failed to allocate memory for column data");
+                free(df->column_names[df->num_columns]);
+                return 0;
+            }
+            for (int i = 0; i < length; i++) {
+                if (((int*)data)[i] == NULL_INT) {
+                    ((int*)df->columns[df->num_columns].data)[i] = NULL_INT;
+                } else {
+                    ((int*)df->columns[df->num_columns].data)[i] = ((int*)data)[i];
+                }
+            }
             break;
         case TYPE_FLOAT:
             data_size = sizeof(float) * length;
             break;
         case TYPE_STRING:
             data_size = sizeof(char*) * length;
+            df->columns[df->num_columns].data = malloc(data_size);
+            if (df->columns[df->num_columns].data == NULL) {
+                set_error("Failed to allocate memory for column data");
+                free(df->column_names[df->num_columns]);
+                return 0;
+            }
+            for (int i = 0; i < length; i++) {
+                char *str = ((char**)data)[i];
+                if (str == NULL) {
+                    ((char**)df->columns[df->num_columns].data)[i] = NULL;
+                } else {
+                    ((char**)df->columns[df->num_columns].data)[i] = strdup(str);
+                    if (((char**)df->columns[df->num_columns].data)[i] == NULL) {
+                        set_error("Failed to allocate memory for string data");
+                        // Clean up previously allocated strings
+                        for (int j = 0; j < i; j++) {
+                            free(((char**)df->columns[df->num_columns].data)[j]);
+                        }
+                        free(df->columns[df->num_columns].data);
+                        free(df->column_names[df->num_columns]);
+                        return 0;
+                    }
+                }
+            }
             break;
         default:
             set_error("Invalid column type");
@@ -156,7 +213,11 @@ void print_dataframe(DataFrame *df) {
                     len = snprintf(buffer, sizeof(buffer), "%.2f", ((float*)df->columns[i].data)[row]);
                     break;
                 case TYPE_STRING:
-                    len = strlen(((char**)df->columns[i].data)[row]);
+                    if (((char**)df->columns[i].data)[row] != NULL) {
+                        len = strlen(((char**)df->columns[i].data)[row]);
+                    } else {
+                        len = 3; // Length of "N/A"
+                    }
                     break;
             }
             if (len > col_widths[i + 1]) col_widths[i + 1] = len;
@@ -206,7 +267,7 @@ void print_dataframe(DataFrame *df) {
             continue;
         }
 
-        printf("| %-*d ", col_widths[0], actual_row );  // Print serial number
+        printf("| %-*d ", col_widths[0], actual_row);  // Print serial number
         for (int col = 0; col < df->num_columns; col++) {
             printf("| ");
             switch (df->columns[col].type) {
@@ -217,20 +278,23 @@ void print_dataframe(DataFrame *df) {
                     printf("%-*.2f ", col_widths[col + 1], ((float*)df->columns[col].data)[actual_row]);
                     break;
                 case TYPE_STRING: {
-                char *str = ((char**)df->columns[col].data)[actual_row];
-                if (str == NULL || strlen(str) == 0) {
-                    printf("%-*s ", col_widths[col + 1], "N/A");
-                } else if (strlen(str) > col_widths[col + 1]) {
-                    printf("%-.*s... ", col_widths[col + 1] - 3, str);
-                } else {
-                    printf("%-*s ", col_widths[col + 1], str);
+                    char *str = ((char**)df->columns[col].data)[actual_row];
+                    if (str == NULL) {
+                        printf("%-*s ", col_widths[col + 1], "N/A");
+                    } else if (strlen(str) == 0) {
+                        printf("%-*s ", col_widths[col + 1], "(empty)");
+                    } else if (strlen(str) > col_widths[col + 1]) {
+                        printf("%-.*s... ", col_widths[col + 1] - 3, str);
+                    } else {
+                        printf("%-*s ", col_widths[col + 1], str);
+                    }
+                    break;
                 }
-                break;
-            }
             }
         }
         printf("|\n");
     }
+    
 
     // Print bottom border
     for (int i = 0; i <= df->num_columns; i++) {
@@ -301,15 +365,17 @@ int* shape_df(DataFrame *df) {
 
 
 // Helper function to count null values
+#define NULL_FLOAT NAN
+// Helper function to get the size of a column type
 int count_null_values(void *data, ColumnType type, int length) {
     int null_count = 0;
     for (int i = 0; i < length; i++) {
         switch (type) {
             case TYPE_INT:
-                if (((int*)data)[i] == 0) null_count++;
+                if (((int*)data)[i] == NULL_INT) null_count++;
                 break;
             case TYPE_FLOAT:
-                if (((float*)data)[i] == 0.0f) null_count++;
+                if (isnan(((float*)data)[i])) null_count++;
                 break;
             case TYPE_STRING:
                 if (((char**)data)[i] == NULL || strlen(((char**)data)[i]) == 0) null_count++;
@@ -335,7 +401,14 @@ void count_unique_values(char **data, int length, int *unique_count, char ***uni
     *unique_values = malloc(length * sizeof(char*));
     *frequencies = calloc(length, sizeof(int));
 
+
     for (int i = 0; i < length; i++) {
+        
+        // Handle null or empty values
+        if (data[i] == NULL || strlen(data[i]) == 0) {
+            continue;
+        }
+
         int found = 0;
         for (int j = 0; j < *unique_count; j++) {
             if (strcmp(data[i], (*unique_values)[j]) == 0) {
@@ -346,10 +419,14 @@ void count_unique_values(char **data, int length, int *unique_count, char ***uni
         }
         if (!found) {
             (*unique_values)[*unique_count] = strdup(data[i]);
+            if ((*unique_values)[*unique_count] == NULL) {
+                continue;
+            }
             (*frequencies)[*unique_count] = 1;
             (*unique_count)++;
         }
     }
+
 }
 
 DataFrame* describe_dataframe(DataFrame *df) {
@@ -364,14 +441,34 @@ DataFrame* describe_dataframe(DataFrame *df) {
         return NULL;
     }
 
-    // Add statistic names as the first column
     const char *stat_names[] = {"count", "null_count", "mean", "median", "mode", "min", "25%", "50%", "75%", "max", "range", "variance", "std_dev"};
     int num_stats = sizeof(stat_names) / sizeof(stat_names[0]);
     char **stat_names_column = malloc(num_stats * sizeof(char*));
+    if (!stat_names_column) {
+        set_error("Failed to allocate memory for stat_names_column");
+        free_dataframe(desc_df);
+        return NULL;
+    }
     for (int i = 0; i < num_stats; i++) {
         stat_names_column[i] = strdup(stat_names[i]);
+        if (!stat_names_column[i]) {
+            set_error("Failed to allocate memory for stat name");
+            for (int j = 0; j < i; j++) {
+                free(stat_names_column[j]);
+            }
+            free(stat_names_column);
+            free_dataframe(desc_df);
+            return NULL;
+        }
     }
-    add_column(desc_df, "Statistic", TYPE_STRING, stat_names_column, num_stats);
+    if (!add_column(desc_df, "Statistic", TYPE_STRING, stat_names_column, num_stats)) {
+        for (int i = 0; i < num_stats; i++) {
+            free(stat_names_column[i]);
+        }
+        free(stat_names_column);
+        free_dataframe(desc_df);
+        return NULL;
+    }
 
     for (int i = 0; i < df->num_columns; i++) {
         ColumnType type;
@@ -379,18 +476,45 @@ DataFrame* describe_dataframe(DataFrame *df) {
         int length = df->num_rows;
 
         char **stats = malloc(num_stats * sizeof(char*));
+        if (!stats) {
+            set_error("Failed to allocate memory for stats");
+            free_dataframe(desc_df);
+            return NULL;
+        }
         for (int j = 0; j < num_stats; j++) {
             stats[j] = malloc(MAX_STRING_LENGTH * sizeof(char));
+            if (!stats[j]) {
+                set_error("Failed to allocate memory for stat");
+                for (int k = 0; k < j; k++) {
+                    free(stats[k]);
+                }
+                free(stats);
+                free_dataframe(desc_df);
+                return NULL;
+            }
         }
 
         int null_count = count_null_values(data, type, length);
         snprintf(stats[0], MAX_STRING_LENGTH, "%d", length);
         snprintf(stats[1], MAX_STRING_LENGTH, "%d", null_count);
-
+        
         if (type == TYPE_INT || type == TYPE_FLOAT) {
             float *float_data = malloc(length * sizeof(float));
+            if (!float_data) {
+                set_error("Failed to allocate memory for float_data");
+                for (int j = 0; j < num_stats; j++) {
+                    free(stats[j]);
+                }
+                free(stats);
+                free_dataframe(desc_df);
+                return NULL;
+            }
             for (int j = 0; j < length; j++) {
-                float_data[j] = (type == TYPE_INT) ? ((int*)data)[j] : ((float*)data)[j];
+                if (type == TYPE_INT) {
+                    float_data[j] = (((int*)data)[j] == NULL_INT) ? NAN : (float)((int*)data)[j];
+                } else {
+                    float_data[j] = ((float*)data)[j];
+                }
             }
 
             float mean = calculate_mean(float_data, length);
@@ -401,12 +525,14 @@ DataFrame* describe_dataframe(DataFrame *df) {
             float q25 = calculate_quartile(float_data, length, 0.25);
             float q50 = calculate_quartile(float_data, length, 0.5);
             float q75 = calculate_quartile(float_data, length, 0.75);
-            float min = float_data[0], max = float_data[0];
-            for (int j = 1; j < length; j++) {
-                if (float_data[j] < min) min = float_data[j];
-                if (float_data[j] > max) max = float_data[j];
+            float min = INFINITY, max = -INFINITY;
+            for (int j = 0; j < length; j++) {
+                if (!isnan(float_data[j])) {
+                    if (float_data[j] < min) min = float_data[j];
+                    if (float_data[j] > max) max = float_data[j];
+                }
             }
-            float range = calculate_range(float_data, length);
+            float range = (min != INFINITY && max != -INFINITY) ? max - min : NAN;
 
             snprintf(stats[2], MAX_STRING_LENGTH, "%.2f", mean);
             snprintf(stats[3], MAX_STRING_LENGTH, "%.2f", median);
@@ -426,7 +552,6 @@ DataFrame* describe_dataframe(DataFrame *df) {
             char **unique_values;
             int *frequencies;
             count_unique_values((char**)data, length, &unique_count, &unique_values, &frequencies);
-
             snprintf(stats[2], MAX_STRING_LENGTH, "N/A");
             snprintf(stats[3], MAX_STRING_LENGTH, "N/A");
             snprintf(stats[4], MAX_STRING_LENGTH, "%d unique values", unique_count);
@@ -446,7 +571,14 @@ DataFrame* describe_dataframe(DataFrame *df) {
             free(frequencies);
         }
 
-        add_column(desc_df, df->column_names[i], TYPE_STRING, stats, num_stats);
+        if (!add_column(desc_df, df->column_names[i], TYPE_STRING, stats, num_stats)) {
+            for (int j = 0; j < num_stats; j++) {
+                free(stats[j]);
+            }
+            free(stats);
+            free_dataframe(desc_df);
+            return NULL;
+        }
     }
 
     return desc_df;
@@ -560,62 +692,99 @@ float calculate_quartile(float *data, int length, float percentile) {
 
  // Function to handle missing values
  DataFrame* handle_missing_values(DataFrame *df, int column_index, const char *strategy) {
-     if (df == NULL || column_index < 0 || column_index >= df->num_columns) {
-         set_error("Invalid DataFrame or column index");
-         return NULL;
-     }
+    if (df == NULL || column_index < 0 || column_index >= df->num_columns) {
+        set_error("Invalid DataFrame or column index");
+        return NULL;
+    }
 
-     Column *column = &df->columns[column_index];
+    Column *column = &df->columns[column_index];
 
-     if (column->type != TYPE_FLOAT) {
-         set_error("Handling missing values is only implemented for float columns");
-         return NULL;
-     }
+    if (column->type != TYPE_FLOAT && column->type != TYPE_INT) {
+        set_error("Handling missing values is only implemented for float and int columns");
+        return NULL;
+    }
 
-     float *data = (float*)column->data;
+    // Convert int column to float if necessary
+    if (column->type == TYPE_INT) {
+        float *new_data = malloc(df->num_rows * sizeof(float));
+        if (!new_data) {
+            set_error("Failed to allocate memory for float conversion");
+            return NULL;
+        }
 
-     if (strcmp(strategy, "remove") == 0) {
-         // Remove rows with null values
-         int new_row_count = 0;
-         for (int i = 0; i < df->num_rows; i++) {
-             if (!isnan(data[i])) {
-                 for (int j = 0; j < df->num_columns; j++) {
-                     memcpy((char*)df->columns[j].data + new_row_count * sizeof(float),
-                            (char*)df->columns[j].data + i * sizeof(float),
-                            sizeof(float));
-                 }
-                 new_row_count++;
-             }
-         }
-         df->num_rows = new_row_count;
-     } else {
-         float replacement_value;
-         if (strcmp(strategy, "mean") == 0) {
-             replacement_value = calculate_mean(data, df->num_rows);
-         } else if (strcmp(strategy, "median") == 0) {
-             replacement_value = calculate_median(data, df->num_rows);
-         } else if (strcmp(strategy, "mode") == 0) {
-             replacement_value = calculate_mode(data, df->num_rows);
-         } else {
-             set_error("Invalid strategy for handling missing values");
-             return NULL;
-         }
+        int *int_data = (int*)column->data;
+        for (int i = 0; i < df->num_rows; i++) {
+            if (int_data[i] == NULL_INT) {
+                new_data[i] = NAN;
+            } else {
+                new_data[i] = (float)int_data[i];
+            }
+        }
 
-         if (isnan(replacement_value)) {
-             set_error("Unable to calculate replacement value (all values might be NaN)");
-             return NULL;
-         }
+        free(column->data);
+        column->data = new_data;
+        column->type = TYPE_FLOAT;
+    }
 
-         // Replace missing values
-         for (int i = 0; i < df->num_rows; i++) {
-             if (isnan(data[i])) {
-                 data[i] = replacement_value;
-             }
-         }
-     }
+    float *data = (float*)column->data;
 
-     return df;
- }
+    if (strcmp(strategy, "remove") == 0) {
+        // Remove rows with null values
+        int new_row_count = 0;
+        for (int i = 0; i < df->num_rows; i++) {
+            if (!isnan(data[i])) {
+                for (int j = 0; j < df->num_columns; j++) {
+                    size_t element_size;
+                    switch (df->columns[j].type) {
+                        case TYPE_INT:
+                            element_size = sizeof(int);
+                            break;
+                        case TYPE_FLOAT:
+                            element_size = sizeof(float);
+                            break;
+                        case TYPE_STRING:
+                            element_size = sizeof(char*);
+                            break;
+                        default:
+                            set_error("Unknown column type");
+                            return NULL;
+                    }
+                    memcpy((char*)df->columns[j].data + new_row_count * element_size,
+                           (char*)df->columns[j].data + i * element_size,
+                           element_size);
+                }
+                new_row_count++;
+            }
+        }
+        df->num_rows = new_row_count;
+    } else {
+        float replacement_value;
+        if (strcmp(strategy, "mean") == 0) {
+            replacement_value = calculate_mean(data, df->num_rows);
+        } else if (strcmp(strategy, "median") == 0) {
+            replacement_value = calculate_median(data, df->num_rows);
+        } else if (strcmp(strategy, "mode") == 0) {
+            replacement_value = calculate_mode(data, df->num_rows);
+        } else {
+            set_error("Invalid strategy for handling missing values");
+            return NULL;
+        }
+
+        if (isnan(replacement_value)) {
+            set_error("Unable to calculate replacement value (all values might be NaN)");
+            return NULL;
+        }
+
+        // Replace missing values
+        for (int i = 0; i < df->num_rows; i++) {
+            if (isnan(data[i])) {
+                data[i] = replacement_value;
+            }
+        }
+    }
+
+    return df;
+}
 
 // Function to normalize a column
 DataFrame* normalize_column(DataFrame *df, int column_index) {
@@ -766,19 +935,34 @@ int add_column_from_strings(DataFrame *df, const char *name, char **data, int nu
     }
 
     for (int i = 0; i < num_rows; i++) {
+        // Check for null values
+        int is_null = (data[i][0] == '\0' || strcasecmp(data[i], "NULL") == 0);
+
         switch (type) {
             case TYPE_INT:
-                ((int*)column_data)[i] = atoi(data[i]);
+                if (is_null) {
+                    ((int*)column_data)[i] = NULL_INT;  // Use 0 for null integers
+                } else {
+                    ((int*)column_data)[i] = atoi(data[i]);
+                }
                 break;
             case TYPE_FLOAT:
-                ((float*)column_data)[i] = atof(data[i]);
+                if (is_null) {
+                    ((float*)column_data)[i] = NAN;  // Use NAN for null floats
+                } else {
+                    ((float*)column_data)[i] = atof(data[i]);
+                }
                 break;
             case TYPE_STRING:
-                ((char**)column_data)[i] = strdup(data[i]);
-                if (((char**)column_data)[i] == NULL) {
-                    set_error("Memory allocation failed for string data");
-                    free(column_data);
-                    return 0;
+                if (is_null) {
+                    ((char**)column_data)[i] = NULL;  // Use NULL for null strings
+                } else {
+                    ((char**)column_data)[i] = strdup(data[i]);
+                    if (((char**)column_data)[i] == NULL) {
+                        set_error("Memory allocation failed for string data");
+                        free(column_data);
+                        return 0;
+                    }
                 }
                 break;
         }
@@ -990,13 +1174,25 @@ int print_dataframe_s(DataFrame *df, const char *filename) {
             int len = 0;
             switch (df->columns[i].type) {
                 case TYPE_INT:
-                    len = snprintf(buffer, sizeof(buffer), "%d", ((int*)df->columns[i].data)[row]);
+                    if (((int*)df->columns[i].data)[row] == 0) {
+                        len = 4; // Length of "NULL"
+                    } else {
+                        len = snprintf(buffer, sizeof(buffer), "%d", ((int*)df->columns[i].data)[row]);
+                    }
                     break;
                 case TYPE_FLOAT:
-                    len = snprintf(buffer, sizeof(buffer), "%.2f", ((float*)df->columns[i].data)[row]);
+                    if (isnan(((float*)df->columns[i].data)[row])) {
+                        len = 4; // Length of "NULL"
+                    } else {
+                        len = snprintf(buffer, sizeof(buffer), "%.2f", ((float*)df->columns[i].data)[row]);
+                    }
                     break;
                 case TYPE_STRING:
-                    len = strlen(((char**)df->columns[i].data)[row]);
+                    if (((char**)df->columns[i].data)[row] == NULL) {
+                        len = 0; // Empty string for NULL
+                    } else {
+                        len = strlen(((char**)df->columns[i].data)[row]);
+                    }
                     break;
             }
             if (len > col_widths[i + 1]) col_widths[i + 1] = len;
@@ -1022,13 +1218,25 @@ int print_dataframe_s(DataFrame *df, const char *filename) {
         for (int col = 0; col < df->num_columns; col++) {
             switch (df->columns[col].type) {
                 case TYPE_INT:
-                    fprintf(file, "| %-*d ", col_widths[col + 1], ((int*)df->columns[col].data)[row]);
+                    if (((int*)df->columns[col].data)[row] == 0) {
+                        fprintf(file, "| %-*s ", col_widths[col + 1], "NULL");
+                    } else {
+                        fprintf(file, "| %-*d ", col_widths[col + 1], ((int*)df->columns[col].data)[row]);
+                    }
                     break;
                 case TYPE_FLOAT:
-                    fprintf(file, "| %-*.2f ", col_widths[col + 1], ((float*)df->columns[col].data)[row]);
+                    if (isnan(((float*)df->columns[col].data)[row])) {
+                        fprintf(file, "| %-*s ", col_widths[col + 1], "NULL");
+                    } else {
+                        fprintf(file, "| %-*.2f ", col_widths[col + 1], ((float*)df->columns[col].data)[row]);
+                    }
                     break;
                 case TYPE_STRING:
-                    fprintf(file, "| %-*s ", col_widths[col + 1], ((char**)df->columns[col].data)[row]);
+                    if (((char**)df->columns[col].data)[row] == NULL) {
+                        fprintf(file, "| %-*s ", col_widths[col + 1], "");
+                    } else {
+                        fprintf(file, "| %-*s ", col_widths[col + 1], ((char**)df->columns[col].data)[row]);
+                    }
                     break;
             }
         }
@@ -1040,38 +1248,46 @@ int print_dataframe_s(DataFrame *df, const char *filename) {
 }
 
 int write_csv(DataFrame *df, const char *filename) {
-    if (df == NULL) {
-        set_error("DataFrame is NULL");
-        return 0;
-    }
-
     FILE *file = fopen(filename, "w");
     if (file == NULL) {
-        set_error("Unable to open file for writing");
+        set_error("Failed to open file for writing");
         return 0;
     }
 
-    // Write headers
+    // Write header
     for (int i = 0; i < df->num_columns; i++) {
-        fprintf(file, "%s%s", df->column_names[i], (i < df->num_columns - 1) ? "," : "\n");
+        fprintf(file, "%s", df->column_names[i]);
+        if (i < df->num_columns - 1) {
+            fprintf(file, ",");
+        }
     }
+    fprintf(file, "\n");
 
     // Write data
     for (int row = 0; row < df->num_rows; row++) {
         for (int col = 0; col < df->num_columns; col++) {
-            switch (df->columns[col].type) {
+            Column *column = &df->columns[col];
+            switch (column->type) {
                 case TYPE_INT:
-                    fprintf(file, "%d", ((int*)df->columns[col].data)[row]);
+                    fprintf(file, "%d", ((int*)column->data)[row]);
                     break;
                 case TYPE_FLOAT:
-                    fprintf(file, "%.2f", ((float*)df->columns[col].data)[row]);
+                    if (isnan(((float*)column->data)[row])) {
+                        // Write blank for NaN values
+                        fprintf(file, "");
+                    } else {
+                        fprintf(file, "%f", ((float*)column->data)[row]);
+                    }
                     break;
                 case TYPE_STRING:
-                    fprintf(file, "%s", ((char**)df->columns[col].data)[row]);
+                    fprintf(file, "%s", ((char**)column->data)[row]);
                     break;
             }
-            fprintf(file, "%s", (col < df->num_columns - 1) ? "," : "\n");
+            if (col < df->num_columns - 1) {
+                fprintf(file, ",");
+            }
         }
+        fprintf(file, "\n");
     }
 
     fclose(file);
@@ -1332,4 +1548,450 @@ int delete_column(DataFrame *df, int column_index) {
     }
 
     return 1;
+}
+int replace_value(DataFrame *df, int column_index, void *old_value, void *new_value) {
+    if (df == NULL || column_index < 0 || column_index >= df->num_columns) {
+        set_error("Invalid DataFrame or column index");
+        return 0;
+    }
+
+    Column *column = &df->columns[column_index];
+    int replaced_count = 0;
+
+
+    switch (column->type) {
+        case TYPE_INT: {
+            int *data = (int *)column->data;
+            int old_int = *(int *)old_value;
+            int new_int = *(int *)new_value;
+            for (int i = 0; i < df->num_rows; i++) {
+                if (data[i] == old_int) {
+                    data[i] = new_int;
+                    replaced_count++;
+                }
+            }
+            break;
+        }
+        case TYPE_FLOAT: {
+            float *data = (float *)column->data;
+            float old_float = *(float *)old_value;
+            float new_float = *(float *)new_value;
+            for (int i = 0; i < df->num_rows; i++) {
+                if (fabs(data[i] - old_float) < 1e-6) {
+                    data[i] = new_float;
+                    replaced_count++;
+                }
+            }
+            break;
+        }
+        case TYPE_STRING: {
+            char **data = (char **)column->data;
+            char *old_str = (char *)old_value;
+            char *new_str = (char *)new_value;
+            for (int i = 0; i < df->num_rows; i++) {
+                if (data[i] == NULL) {
+                    continue;
+                }
+                if (strcmp(data[i], old_str) == 0) {
+                    free(data[i]);
+                    data[i] = strdup(new_str);
+                    if (data[i] == NULL) {
+                        set_error("Memory allocation failed");
+                        return replaced_count;
+                    }
+                    replaced_count++;
+                }
+            }
+            break;
+        }
+        default:
+            set_error("Unsupported column type");
+            return 0;
+    }
+
+    return replaced_count;
+}
+
+
+int print_unique_values(DataFrame *df, int column_index) {
+    
+    if (df == NULL || column_index < 0 || column_index >= df->num_columns) {
+        set_error("Invalid DataFrame or column index");
+        return 0;
+    }
+
+    Column *column = &df->columns[column_index];
+    int unique_count = 0;
+
+
+    switch (column->type) {
+        case TYPE_INT: {
+            int *data = (int *)column->data;
+            int *unique = malloc(df->num_rows * sizeof(int));
+            if (!unique) {
+                set_error("Memory allocation failed");
+                return 0;
+            }
+
+            for (int i = 0; i < df->num_rows; i++) {
+                int is_unique = 1;
+                for (int j = 0; j < unique_count; j++) {
+                    if (data[i] == unique[j]) {
+                        is_unique = 0;
+                        break;
+                    }
+                }
+                if (is_unique) {
+                    unique[unique_count++] = data[i];
+                }
+            }
+
+            printf("Unique values in column '%s' (INT):\n", df->column_names[column_index]);
+            for (int i = 0; i < unique_count; i++) {
+                printf("%d ", unique[i]);
+            }
+            printf("\n");
+
+            free(unique);
+            break;
+        }
+        case TYPE_FLOAT: {
+            float *data = (float *)column->data;
+            float *unique = malloc(df->num_rows * sizeof(float));
+            if (!unique) {
+                set_error("Memory allocation failed");
+                return 0;
+            }
+
+            for (int i = 0; i < df->num_rows; i++) {
+                int is_unique = 1;
+                for (int j = 0; j < unique_count; j++) {
+                    if (fabs(data[i] - unique[j]) < 1e-6) {
+                        is_unique = 0;
+                        break;
+                    }
+                }
+                if (is_unique) {
+                    unique[unique_count++] = data[i];
+                }
+            }
+
+            printf("Unique values in column '%s' (FLOAT):\n", df->column_names[column_index]);
+            for (int i = 0; i < unique_count; i++) {
+                printf("%.6f ", unique[i]);
+            }
+            printf("\n");
+
+            free(unique);
+            break;
+        }
+        case TYPE_STRING: {
+            char **data = (char **)column->data;
+            char **unique = malloc(df->num_rows * sizeof(char *));
+            if (!unique) {
+                set_error("Memory allocation failed");
+                return 0;
+            }
+
+            for (int i = 0; i < df->num_rows; i++) {
+                if (data[i] == NULL) {
+                    continue;
+                }
+                int is_unique = 1;
+                for (int j = 0; j < unique_count; j++) {
+                    if (strcmp(data[i], unique[j]) == 0) {
+                        is_unique = 0;
+                        break;
+                    }
+                }
+                if (is_unique) {
+                    unique[unique_count++] = data[i];
+                }
+            }
+
+            for (int i = 0; i < unique_count; i++) {
+                printf("%s ", unique[i]);
+            }
+            printf("\n");
+
+            free(unique);
+            break;
+        }
+        default:
+            set_error("Unsupported column type");
+            return 0;
+    }
+
+    return unique_count;
+}
+
+DataFrame* split_dataframe(DataFrame* df, const char* target_column, void** y) {
+    if (df == NULL || target_column == NULL) {
+        return NULL;
+    }
+
+    int target_col_index = -1;
+    for (int i = 0; i < df->num_columns; i++) {
+        if (strcmp(df->column_names[i], target_column) == 0) {
+            target_col_index = i;
+            break;
+        }
+    }
+
+    if (target_col_index == -1) {
+        printf("Target column '%s' not found in the DataFrame.\n", target_column);
+        return NULL;
+    }
+
+    DataFrame* X = create_dataframe();
+    if (X == NULL) {
+        return NULL;
+    }
+
+    // Copy all columns except the target column to X
+    for (int i = 0; i < df->num_columns; i++) {
+        if (i != target_col_index) {
+            void* column_data = get_column_as_array(df, i, &df->columns[i].type);
+            if (column_data == NULL || !add_column(X, df->column_names[i], df->columns[i].type, column_data, df->num_rows)) {
+                free_dataframe(X);
+                free(column_data);
+                return NULL;
+            }
+            free(column_data);
+        }
+    }
+
+    // Extract the target column as y
+    *y = get_column_as_array(df, target_col_index, &df->columns[target_col_index].type);
+    if (*y == NULL) {
+        free_dataframe(X);
+        return NULL;
+    }
+
+    return X;
+}
+
+#include <math.h>
+void matrix_multiply(float *A, float *B, float *C, int m, int n, int p) {
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < p; j++) {
+            C[i*p + j] = 0;
+            for (int k = 0; k < n; k++) {
+                C[i*p + j] += A[i*n + k] * B[k*p + j];
+            }
+        }
+    }
+}
+
+// Helper function for matrix transpose
+void matrix_transpose(float *A, float *AT, int m, int n) {
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+            AT[j*m + i] = A[i*n + j];
+        }
+    }
+}
+
+// Helper function for matrix inversion (using Gauss-Jordan elimination)
+int matrix_inverse(float *A, int n) {
+    float *temp = malloc(n * n * sizeof(float));
+    if (temp == NULL) {
+        return 0;
+    }
+    memcpy(temp, A, n * n * sizeof(float));
+
+    float *identity = calloc(n * n, sizeof(float));
+    if (identity == NULL) {
+        free(temp);
+        return 0;
+    }
+    for (int i = 0; i < n; i++) {
+        identity[i*n + i] = 1.0f;
+    }
+
+    for (int i = 0; i < n; i++) {
+        float pivot = temp[i*n + i];
+        if (fabs(pivot) < 1e-6) {
+            free(temp);
+            free(identity);
+            return 0;  // Matrix is singular
+        }
+
+        for (int j = 0; j < n; j++) {
+            temp[i*n + j] /= pivot;
+            identity[i*n + j] /= pivot;
+        }
+
+        for (int k = 0; k < n; k++) {
+            if (k != i) {
+                float factor = temp[k*n + i];
+                for (int j = 0; j < n; j++) {
+                    temp[k*n + j] -= factor * temp[i*n + j];
+                    identity[k*n + j] -= factor * identity[i*n + j];
+                }
+            }
+        }
+    }
+
+    memcpy(A, identity, n * n * sizeof(float));
+    free(temp);
+    free(identity);
+    return 1;
+}
+LinearRegressionModel* create_linear_regression_model(int num_features) {
+    LinearRegressionModel *model = malloc(sizeof(LinearRegressionModel));
+    if (model == NULL) {
+        return NULL;
+    }
+    model->coefficients = calloc(num_features, sizeof(float));
+    if (model->coefficients == NULL) {
+        free(model);
+        return NULL;
+    }
+    model->intercept = 0.0f;
+    model->num_features = num_features;
+    return model;
+}
+
+void free_linear_regression_model(LinearRegressionModel *model) {
+    if (model) {
+        free(model->coefficients);
+        free(model);
+    }
+}
+
+int fit_linear_regression(LinearRegressionModel *model, DataFrame *X, float *y) {
+    if (model == NULL || X == NULL || y == NULL || X->num_columns != model->num_features) {
+        return 0;
+    }
+
+    int n = X->num_rows;
+    int m = X->num_columns;
+
+    // Allocate memory for X matrix (including bias term)
+    float *X_mat = malloc((n * (m + 1)) * sizeof(float));
+    if (X_mat == NULL) {
+        return 0;
+    }
+
+    // Fill X matrix
+    for (int i = 0; i < n; i++) {
+        X_mat[i * (m + 1)] = 1.0f;  // Bias term
+        for (int j = 0; j < m; j++) {
+            X_mat[i * (m + 1) + j + 1] = ((float*)X->columns[j].data)[i];
+        }
+    }
+
+    // Allocate memory for intermediate matrices
+    float *XT = malloc((n * (m + 1)) * sizeof(float));
+    float *XTX = malloc(((m + 1) * (m + 1)) * sizeof(float));
+    float *XTy = malloc((m + 1) * sizeof(float));
+
+    if (XT == NULL || XTX == NULL || XTy == NULL) {
+        free(X_mat);
+        free(XT);
+        free(XTX);
+        free(XTy);
+        return 0;
+    }
+
+    // Compute X^T
+    matrix_transpose(X_mat, XT, n, m + 1);
+
+    // Compute X^T * X
+    matrix_multiply(XT, X_mat, XTX, m + 1, n, m + 1);
+
+    // Compute (X^T * X)^-1
+    if (!matrix_inverse(XTX, m + 1)) {
+        free(X_mat);
+        free(XT);
+        free(XTX);
+        free(XTy);
+        return 0;
+    }
+
+    // Compute X^T * y
+    for (int i = 0; i < m + 1; i++) {
+        XTy[i] = 0;
+        for (int j = 0; j < n; j++) {
+            XTy[i] += XT[i*n + j] * y[j];
+        }
+    }
+
+    // Compute (X^T * X)^-1 * (X^T * y)
+    float *coefficients = malloc((m + 1) * sizeof(float));
+    if (coefficients == NULL) {
+        free(X_mat);
+        free(XT);
+        free(XTX);
+        free(XTy);
+        return 0;
+    }
+
+    matrix_multiply(XTX, XTy, coefficients, m + 1, m + 1, 1);
+
+    // Store the results in the model
+    model->intercept = coefficients[0];
+    for (int i = 0; i < m; i++) {
+        model->coefficients[i] = coefficients[i + 1];
+    }
+
+    // Free allocated memory
+    free(X_mat);
+    free(XT);
+    free(XTX);
+    free(XTy);
+    free(coefficients);
+
+    return 1;
+}
+
+float* predict_linear_regression(LinearRegressionModel *model, DataFrame *X) {
+    if (model == NULL || X == NULL || X->num_columns != model->num_features) {
+        return NULL;
+    }
+
+    int n = X->num_rows;
+    float *predictions = malloc(n * sizeof(float));
+    if (predictions == NULL) {
+        return NULL;
+    }
+
+    for (int i = 0; i < n; i++) {
+        predictions[i] = model->intercept;
+        for (int j = 0; j < model->num_features; j++) {
+            if (X->columns[j].type == TYPE_FLOAT) {
+                predictions[i] += model->coefficients[j] * ((float*)X->columns[j].data)[i];
+            } else if (X->columns[j].type == TYPE_INT) {
+                predictions[i] += model->coefficients[j] * (float)((int*)X->columns[j].data)[i];
+            }
+        }
+    }
+
+    return predictions;
+}
+
+float calculate_r_squared(float *y_true, float *y_pred, int n) {
+    float mean_y = 0.0f;
+    for (int i = 0; i < n; i++) {
+        mean_y += y_true[i];
+    }
+    mean_y /= n;
+
+    float ss_tot = 0.0f, ss_res = 0.0f;
+    for (int i = 0; i < n; i++) {
+        ss_tot += (y_true[i] - mean_y) * (y_true[i] - mean_y);
+        ss_res += (y_true[i] - y_pred[i]) * (y_true[i] - y_pred[i]);
+    }
+
+    return 1 - (ss_res / ss_tot);
+}
+
+float calculate_mse(float *y_true, float *y_pred, int n) {
+    float mse = 0.0f;
+    for (int i = 0; i < n; i++) {
+        float error = y_true[i] - y_pred[i];
+        mse += error * error;
+    }
+    return mse / n;
 }

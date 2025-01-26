@@ -1,2 +1,7 @@
 *.csv
 *.txt
+# Virtual Environment
+venv/
+env/
+.venv/
+c-kernal/

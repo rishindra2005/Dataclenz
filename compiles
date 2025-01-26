@@ -1,0 +1,8 @@
+gcc -c clenzdat.c -o clenzdat.o
+ar rcs libclenzdat.a clenzdat.o
+<!-- Move the files as follows:
+Move clenzdat.h to the include/ directory
+Move libclenzdat.a to the lib/ directory
+Keep your sample.c in the src/ directory -->
+gcc -shared -o clenzdat.dll clenzdat.c
+<!-- Move clenzdat.dll to the lib/ directory. -->
