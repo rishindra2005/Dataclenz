@@ -20,40 +20,39 @@ HEADER = $(LIBRARY_NAME).h
 SAMPLE_SRC = $(SRC_DIR)/sample.c
 SAMPLE_BIN = sample
 
-.PHONY: all clean
+.PHONY: all clean static shared sample move
 
-all: static shared sample move
+all: static shared move sample
 
 static: $(STATIC_LIB)
 
 shared: $(SHARED_LIB_WIN) $(SHARED_LIB_UNIX)
 
-sample: $(SAMPLE_BIN)
+sample: move $(SAMPLE_BIN)
 
 $(LIBRARY_OBJ): $(LIBRARY_SRC)
-	$(CC) $(CFLAGS) -c $< -o $@
+    $(CC) $(CFLAGS) -c $< -o $@
 
 $(STATIC_LIB): $(LIBRARY_OBJ)
-	$(AR) rcs $@ $<
+    $(AR) rcs $@ $<
 
 $(SHARED_LIB_WIN): $(LIBRARY_SRC)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
+    $(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
 
 $(SHARED_LIB_UNIX): $(LIBRARY_SRC)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
+    $(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
 
-$(SAMPLE_BIN): $(SAMPLE_SRC) $(STATIC_LIB)
-	$(CC) $(CFLAGS) -o $@ $< -L. -l$(LIBRARY_NAME)
+$(SAMPLE_BIN): $(SAMPLE_SRC)
+    $(CC) $(CFLAGS) -o $@ $< -L$(LIB_DIR) -I$(INCLUDE_DIR) -l$(LIBRARY_NAME)
 
 move:
-	mkdir -p $(INCLUDE_DIR) $(LIB_DIR) $(BIN_DIR)
-	mv $(HEADER) $(INCLUDE_DIR)/
-	mv $(STATIC_LIB) $(LIB_DIR)/
-	mv $(SHARED_LIB_WIN) $(LIB_DIR)/
-	mv $(SHARED_LIB_UNIX) $(LIB_DIR)/
-	mv $(SAMPLE_BIN) $(BIN_DIR)/
-	mv $(LIBRARY_OBJ) $(BIN_DIR)/
+    mkdir -p $(INCLUDE_DIR) $(LIB_DIR) $(BIN_DIR)
+    mv $(HEADER) $(INCLUDE_DIR)/
+    mv $(STATIC_LIB) $(LIB_DIR)/
+    mv $(SHARED_LIB_WIN) $(LIB_DIR)/
+    mv $(SHARED_LIB_UNIX) $(LIB_DIR)/
+    mv $(LIBRARY_OBJ) $(BIN_DIR)/
 
 clean:
-	rm -f $(LIBRARY_OBJ) $(STATIC_LIB) $(SHARED_LIB_WIN) $(SHARED_LIB_UNIX) $(SAMPLE_BIN)
-	rm -rf $(INCLUDE_DIR) $(LIB_DIR) $(BIN_DIR)
+    rm -f $(LIBRARY_OBJ) $(STATIC_LIB) $(SHARED_LIB_WIN) $(SHARED_LIB_UNIX) $(SAMPLE_BIN)
+    rm -rf $(INCLUDE_DIR) $(LIB_DIR) $(BIN_DIR)
