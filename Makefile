@@ -3,6 +3,9 @@ AR = ar
 CFLAGS = -fPIC -Wall -Wextra -O2
 LDFLAGS = -shared
 
+# Detect OS
+OS := $(shell uname -s)
+
 # Directories
 SRC_DIR = src
 INCLUDE_DIR = include
@@ -31,28 +34,36 @@ shared: $(SHARED_LIB_WIN) $(SHARED_LIB_UNIX)
 sample: move $(SAMPLE_BIN)
 
 $(LIBRARY_OBJ): $(LIBRARY_SRC)
-    $(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 $(STATIC_LIB): $(LIBRARY_OBJ)
-    $(AR) rcs $@ $<
+	$(AR) rcs $@ $<
 
 $(SHARED_LIB_WIN): $(LIBRARY_SRC)
-    $(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
 
 $(SHARED_LIB_UNIX): $(LIBRARY_SRC)
-    $(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
 
 $(SAMPLE_BIN): $(SAMPLE_SRC)
-    $(CC) $(CFLAGS) -o $@ $< -L$(LIB_DIR) -I$(INCLUDE_DIR) -l$(LIBRARY_NAME)
+	$(CC) $(CFLAGS) -o $@ $< -L$(LIB_DIR) -I$(INCLUDE_DIR) -lclenzdat -lm
 
 move:
-    mkdir -p $(INCLUDE_DIR) $(LIB_DIR) $(BIN_DIR)
-    mv $(HEADER) $(INCLUDE_DIR)/
-    mv $(STATIC_LIB) $(LIB_DIR)/
-    mv $(SHARED_LIB_WIN) $(LIB_DIR)/
-    mv $(SHARED_LIB_UNIX) $(LIB_DIR)/
-    mv $(LIBRARY_OBJ) $(BIN_DIR)/
+ifeq ($(OS), Linux)
+	sudo mv $(HEADER) /usr/include/
+	sudo mv $(STATIC_LIB) /usr/lib/
+	sudo mv $(SHARED_LIB_UNIX) /usr/lib/
+	sudo ldconfig
+else ifeq ($(OS), Darwin) # macOS
+	sudo mv $(HEADER) /usr/local/include/
+	sudo mv $(STATIC_LIB) /usr/local/lib/
+	sudo mv $(SHARED_LIB_UNIX) /usr/local/lib/
+	sudo ldconfig
+else ifeq ($(OS), Windows_NT)
+	move $(HEADER) C:\MinGW\include\
+	move $(STATIC_LIB) C:\MinGW\lib\
+	move $(SHARED_LIB_WIN) C:\MinGW\bin\
+endif
 
 clean:
-    rm -f $(LIBRARY_OBJ) $(STATIC_LIB) $(SHARED_LIB_WIN) $(SHARED_LIB_UNIX) $(SAMPLE_BIN)
-    rm -rf $(INCLUDE_DIR) $(LIB_DIR) $(BIN_DIR)
+	rm -f $(LIBRARY_OBJ) $(STATIC_LIB) $(SHARED_LIB_WIN) $(SHARED_LIB_UNIX) $(SAMPLE_BIN)
