@@ -6,3 +6,6 @@ Move libclenzdat.a to the lib/ directory
 Keep your sample.c in the src/ directory -->
 gcc -shared -o clenzdat.dll clenzdat.c
 <!-- Move clenzdat.dll to the lib/ directory. -->
+gcc -o sample sample.c  -lclenzdat
+
+

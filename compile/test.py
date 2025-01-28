@@ -58,4 +58,4 @@ print('Total time taken:', end - start, 'seconds')
 print('R2 Score:', r2)
 print('Mean Squared Error:', mse)
 # take input from user
-num_rows = input('Enter the number of rows: ')
+num_rows = input('input any key ')

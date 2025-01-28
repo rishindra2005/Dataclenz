@@ -570,13 +570,14 @@ void test_linear_regression() {
         return;
     }
     
-
+    print_dataframe_s(df1, "outputs/housing.txt");
+    DataFrame *description = describe_dataframe(df1);
+    print_dataframe_s(description, "outputs/description.txt");
     // Delete the ocean_proximity column
     delete_column(df1, 9);
     DataFrame *df = handle_missing_values(df1, 4, "remove");
 
-    DataFrame *description = describe_dataframe(df);
-    print_dataframe_s(description, "outputs/description.txt");
+    
     // Print some statistics about the data
     printf("DataFrame shape before normalization: (%d, %d)\n", df->num_rows, df->num_columns);
 
@@ -801,9 +802,11 @@ int main() {
     test_replace_value();  
     test_print_unique_values();
     test_split_dataframe();
-    test_linear_regression();
+    
     test_linear_regression1();
     test();
+    test_linear_regression();
+    printf("All tests passed.\n");
 
 
     return 0;

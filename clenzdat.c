@@ -11,6 +11,17 @@
 char error_message[256] = {0};
 
 
+/**
+ * @brief Logs a debug message to stderr.
+ *
+ * This function prints a formatted debug message to the standard error stream.
+ * It prepends "[DEBUG] " to the message and adds a newline at the end.
+ *
+ * @param format A printf-style format string for the debug message.
+ * @param ... Variable arguments to be formatted according to the format string.
+ *
+ * @return This function does not return a value.
+ */
 void debug_log(const char *format, ...) {
     va_list args;
     va_start(args, format);
@@ -20,6 +31,18 @@ void debug_log(const char *format, ...) {
     va_end(args);
     fflush(stderr);
 }
+
+/**
+ * @brief Sets an error message using a format string and variable arguments.
+ *
+ * This function formats an error message using the provided format string and
+ * variable arguments, then stores it in the global error_message buffer.
+ *
+ * @param format A printf-style format string for the error message.
+ * @param ... Variable arguments to be formatted according to the format string.
+ *
+ * @return This function does not return a value.
+ */
 void set_error(const char *format, ...) {
     va_list args;
     va_start(args, format);
@@ -28,6 +51,16 @@ void set_error(const char *format, ...) {
 }
 
 
+
+/**
+ * @brief Creates a new DataFrame structure.
+ *
+ * This function allocates memory for a new DataFrame and initializes its members.
+ * It sets up space for columns and column names, and initializes the row and column counts.
+ *
+ * @return DataFrame* A pointer to the newly created DataFrame, or NULL if memory allocation fails.
+ *                    The caller is responsible for freeing this memory using free_dataframe().
+ */
 DataFrame* create_dataframe() {
     DataFrame *df = (DataFrame*)malloc(sizeof(DataFrame));
     if (df == NULL) {
@@ -45,8 +78,19 @@ DataFrame* create_dataframe() {
     df->num_rows = 0;
     df->max_rows = 1000;  // Start with 1000 rows, we'll resize as needed
     return df;
-
 }
+
+/**
+ * @brief Resizes a DataFrame to a new number of rows.
+ *
+ * This function changes the number of rows in the DataFrame, reallocating memory
+ * for each column and initializing new elements if the size is increased.
+ *
+ * @param df Pointer to the DataFrame to be resized.
+ * @param new_size The new number of rows for the DataFrame.
+ *
+ * @return 1 if the resize operation was successful, 0 if an error occurred.
+ */
 int resize_dataframe(DataFrame *df, int new_size) {
     if (df == NULL || new_size < 0) {
         set_error("Invalid DataFrame or size");
@@ -87,6 +131,19 @@ int resize_dataframe(DataFrame *df, int new_size) {
 }
 
 
+
+/**
+ * @brief Frees all memory associated with a DataFrame.
+ *
+ * This function deallocates all memory used by the DataFrame, including its columns,
+ * column names, and the DataFrame structure itself. For string-type columns,
+ * it also frees the memory for each individual string.
+ *
+ * @param df Pointer to the DataFrame to be freed. If NULL, the function returns
+ *           without doing anything.
+ *
+ * @return This function does not return a value.
+ */
 void free_dataframe(DataFrame *df) {
     if (df == NULL) return;
     for (int i = 0; i < df->num_columns; i++) {
@@ -104,6 +161,21 @@ void free_dataframe(DataFrame *df) {
 }
 
 
+
+/**
+ * @brief Adds a new column to the DataFrame.
+ *
+ * This function adds a new column to the given DataFrame with the specified name,
+ * type, and data. It handles memory allocation for the new column and its data.
+ *
+ * @param df Pointer to the DataFrame to which the column will be added.
+ * @param name The name of the new column.
+ * @param type The data type of the new column (TYPE_INT, TYPE_FLOAT, or TYPE_STRING).
+ * @param data Pointer to the data to be added to the new column.
+ * @param length The number of elements in the data array.
+ *
+ * @return 1 if the column was successfully added, 0 if an error occurred.
+ */
 int add_column(DataFrame *df, const char *name, ColumnType type, void *data, int length) {
     if (df == NULL) {
         set_error("DataFrame is NULL");
@@ -190,6 +262,19 @@ int add_column(DataFrame *df, const char *name, ColumnType type, void *data, int
 }
 
 
+
+/**
+ * @brief Prints the contents of a DataFrame to the console.
+ *
+ * This function displays the DataFrame in a formatted table, including column names,
+ * data types, and values. If the DataFrame has more than 20 rows, it shows the first
+ * 10 and last 10 rows with an ellipsis in between.
+ *
+ * @param df Pointer to the DataFrame to be printed. If NULL, the function prints
+ *           an error message and returns.
+ *
+ * @return This function does not return a value.
+ */
 void print_dataframe(DataFrame *df) {
     if (df == NULL) {
         printf("DataFrame is NULL\n");
@@ -294,7 +379,7 @@ void print_dataframe(DataFrame *df) {
         }
         printf("|\n");
     }
-    
+
 
     // Print bottom border
     for (int i = 0; i <= df->num_columns; i++) {
@@ -310,6 +395,20 @@ void print_dataframe(DataFrame *df) {
 }
 
 
+
+/**
+ * @brief Creates a new DataFrame containing a range of rows from an existing DataFrame.
+ *
+ * This function extracts a subset of rows from the input DataFrame and creates a new
+ * DataFrame with those rows. The range is inclusive of both start and end rows.
+ *
+ * @param df Pointer to the source DataFrame.
+ * @param start_row The index of the first row to include in the range (inclusive).
+ * @param end_row The index of the last row to include in the range (inclusive).
+ *
+ * @return A pointer to the newly created DataFrame containing the specified range of rows,
+ *         or NULL if an error occurred (e.g., invalid input parameters, memory allocation failure).
+ */
 DataFrame* get_dataframe_range(DataFrame *df, int start_row, int end_row) {
     if (df == NULL || start_row < 0 || end_row >= df->num_rows || start_row > end_row) {
         set_error("Invalid input parameters for get_dataframe_range");
@@ -349,6 +448,21 @@ DataFrame* get_dataframe_range(DataFrame *df, int start_row, int end_row) {
 }
 
 
+
+/**
+ * @brief Get the shape (dimensions) of a DataFrame.
+ *
+ * This function returns the number of rows and columns in the given DataFrame.
+ * If the DataFrame is NULL, it returns [0, 0].
+ *
+ * @param df Pointer to the DataFrame whose shape is to be determined.
+ *           If NULL, the function returns [0, 0].
+ *
+ * @return A pointer to a static array of two integers.
+ *         The first element (index 0) represents the number of rows.
+ *         The second element (index 1) represents the number of columns.
+ *         Note: The returned array is statically allocated and should not be freed.
+ */
 int* shape_df(DataFrame *df) {
     static int shape[2];
     if (df == NULL) {
@@ -364,9 +478,24 @@ int* shape_df(DataFrame *df) {
 
 
 
+
 // Helper function to count null values
 #define NULL_FLOAT NAN
 // Helper function to get the size of a column type
+/**
+ * @brief Counts the number of null values in a column of data.
+ *
+ * This function iterates through the given data array and counts the number of null values
+ * based on the specified column type. For integer columns, NULL_INT is considered null.
+ * For float columns, NaN values are considered null. For string columns, NULL pointers
+ * or empty strings are considered null.
+ *
+ * @param data Pointer to the array of data to be checked.
+ * @param type The type of the column (TYPE_INT, TYPE_FLOAT, or TYPE_STRING).
+ * @param length The number of elements in the data array.
+ *
+ * @return The count of null values found in the data array.
+ */
 int count_null_values(void *data, ColumnType type, int length) {
     int null_count = 0;
     for (int i = 0; i < length; i++) {
@@ -385,7 +514,18 @@ int count_null_values(void *data, ColumnType type, int length) {
     return null_count;
 }
 
+
 // Helper function to calculate range
+/**
+ * @brief Calculates the range of a set of float values.
+ *
+ * This function determines the difference between the maximum and minimum
+ * values in the given array of float data.
+ *
+ * @param data Pointer to an array of float values.
+ * @param length The number of elements in the data array.
+ * @return The range of the data set (maximum value minus minimum value).
+ */
 float calculate_range(float *data, int length) {
     float min = data[0], max = data[0];
     for (int i = 1; i < length; i++) {
@@ -395,7 +535,25 @@ float calculate_range(float *data, int length) {
     return max - min;
 }
 
+
 // Helper function to count unique values and their frequencies
+/**
+ * @brief Counts unique values and their frequencies in an array of strings.
+ *
+ * This function analyzes an array of strings, identifies unique values,
+ * counts their occurrences, and stores the results in provided output parameters.
+ *
+ * @param data An array of strings to be analyzed.
+ * @param length The number of elements in the data array.
+ * @param unique_count Pointer to store the number of unique values found.
+ * @param unique_values Pointer to store an array of unique string values.
+ * @param frequencies Pointer to store an array of frequencies corresponding to unique values.
+ *
+ * @return This function does not return a value. Results are stored in the provided output parameters.
+ *
+ * @note The function allocates memory for unique_values and frequencies.
+ *       The caller is responsible for freeing this memory when it's no longer needed.
+ */
 void count_unique_values(char **data, int length, int *unique_count, char ***unique_values, int **frequencies) {
     *unique_count = 0;
     *unique_values = malloc(length * sizeof(char*));
@@ -403,7 +561,7 @@ void count_unique_values(char **data, int length, int *unique_count, char ***uni
 
 
     for (int i = 0; i < length; i++) {
-        
+
         // Handle null or empty values
         if (data[i] == NULL || strlen(data[i]) == 0) {
             continue;
@@ -429,6 +587,24 @@ void count_unique_values(char **data, int length, int *unique_count, char ***uni
 
 }
 
+/**
+ * @brief Generates a descriptive summary of a DataFrame.
+ *
+ * This function creates a new DataFrame containing statistical information
+ * about each column in the input DataFrame. The summary includes metrics
+ * such as count, null count, mean, median, mode, min, max, quartiles,
+ * range, variance, and standard deviation for numeric columns, and unique
+ * value counts for string columns.
+ *
+ * @param df Pointer to the input DataFrame to be described.
+ *           If NULL, the function returns NULL and sets an error.
+ *
+ * @return A pointer to a new DataFrame containing the descriptive summary.
+ *         Returns NULL if an error occurs during the process, such as
+ *         memory allocation failures or invalid input.
+ *         The caller is responsible for freeing the returned DataFrame
+ *         using free_dataframe() when it's no longer needed.
+ */
 DataFrame* describe_dataframe(DataFrame *df) {
     if (!df) {
         set_error("Invalid DataFrame");
@@ -453,10 +629,6 @@ DataFrame* describe_dataframe(DataFrame *df) {
         stat_names_column[i] = strdup(stat_names[i]);
         if (!stat_names_column[i]) {
             set_error("Failed to allocate memory for stat name");
-            for (int j = 0; j < i; j++) {
-                free(stat_names_column[j]);
-            }
-            free(stat_names_column);
             free_dataframe(desc_df);
             return NULL;
         }
@@ -587,6 +759,16 @@ DataFrame* describe_dataframe(DataFrame *df) {
  #include <math.h>
 
  // Helper function to calculate mean
+ /**
+  * @brief Calculates the mean of a set of float values, ignoring NaN values.
+  *
+  * This function computes the arithmetic mean of the non-NaN values in the given array.
+  * If all values are NaN or the array is empty, it returns NaN.
+  *
+  * @param data Pointer to an array of float values.
+  * @param length The number of elements in the data array.
+  * @return The mean of the non-NaN values in the array, or NaN if no valid values are found.
+  */
  float calculate_mean(float *data, int length) {
      float sum = 0;
      int count = 0;
@@ -599,8 +781,19 @@ DataFrame* describe_dataframe(DataFrame *df) {
      return count > 0 ? sum / count : NAN;
  }
 
- // Helper function to calculate median
+
 // Helper function to calculate median
+/**
+ * @brief Calculates the median value of a float array, ignoring NaN values.
+ *
+ * This function computes the median of the given array by first removing NaN values,
+ * then sorting the remaining values and selecting the middle value(s).
+ *
+ * @param data Pointer to the float array containing the data.
+ * @param length The number of elements in the data array.
+ * @return The median value of the non-NaN elements in the array.
+ *         Returns NAN if all elements are NaN or if memory allocation fails.
+ */
 float calculate_median(float *data, int length) {
     // Allocate memory for temporary array
     float *temp = (float *)malloc(length * sizeof(float));
@@ -608,6 +801,7 @@ float calculate_median(float *data, int length) {
         set_error("Memory allocation failed in calculate_median");
         return NAN;
     }
+
 
     int valid_count = 0;
 
@@ -648,7 +842,19 @@ float calculate_median(float *data, int length) {
 
     return result;
 }
+
  // Helper function to calculate mode
+ /**
+  * @brief Calculates the mode of a set of float values, ignoring NaN values.
+  *
+  * This function determines the most frequently occurring value in the given array.
+  * If multiple values have the same highest frequency, it returns the first one encountered.
+  * NaN values are ignored in the calculation.
+  *
+  * @param data Pointer to an array of float values.
+  * @param length The number of elements in the data array.
+  * @return The mode of the non-NaN values in the array, or NaN if no mode is found or all values are NaN.
+  */
  float calculate_mode(float *data, int length) {
      float mode = NAN;
      int max_count = 0;
@@ -671,6 +877,19 @@ float calculate_median(float *data, int length) {
  }
 
 
+
+/**
+ * @brief Calculates the variance of a set of float values.
+ *
+ * This function computes the variance of the given data set using the provided mean.
+ * The variance is a measure of variability in the data, calculated as the average
+ * of squared differences from the mean.
+ *
+ * @param data Pointer to an array of float values.
+ * @param length The number of elements in the data array.
+ * @param mean The pre-calculated mean of the data set.
+ * @return The variance of the data set.
+ */
 float calculate_variance(float *data, int length, float mean) {
     float sum_squared_diff = 0;
     for (int i = 0; i < length; i++) {
@@ -680,113 +899,191 @@ float calculate_variance(float *data, int length, float mean) {
     return sum_squared_diff / length;
 }
 
+
+/**
+ * @brief Calculates the standard deviation from the given variance.
+ *
+ * This function computes the standard deviation by taking the square root of the variance.
+ * The standard deviation is a measure of the amount of variation or dispersion of a set of values.
+ *
+ * @param variance The variance of the dataset.
+ * @return The standard deviation of the dataset.
+ */
 float calculate_std_deviation(float variance) {
     return sqrt(variance);
 }
 
+
+/**
+ * @brief Calculates the quartile value for a given percentile in a sorted array of floats.
+ *
+ * This function computes the quartile value for a specified percentile in a pre-sorted
+ * array of float values. It uses a simple linear interpolation method.
+ *
+ * @param data Pointer to a sorted array of float values.
+ * @param length The number of elements in the data array.
+ * @param percentile The desired percentile as a float between 0 and 1 (e.g., 0.25 for Q1, 0.5 for median, 0.75 for Q3).
+ * @return The quartile value corresponding to the specified percentile.
+ */
+/**
+ * @brief Calculates the quartile value for a given percentile in a sorted array of floats.
+ *
+ * This function computes the quartile value for a specified percentile in a pre-sorted
+ * array of float values. It uses a simple linear interpolation method.
+ *
+ * @param data Pointer to a sorted array of float values.
+ * @param length The number of elements in the data array.
+ * @param percentile The desired percentile as a float between 0 and 1 (e.g., 0.25 for Q1, 0.5 for median, 0.75 for Q3).
+ * @return The quartile value corresponding to the specified percentile.
+ */
 float calculate_quartile(float *data, int length, float percentile) {
     int index = (int)(percentile * (length - 1));
     return data[index];
 }
 
 
+
+
  // Function to handle missing values
+ /**
+  * @brief Handles missing values in a specified column of a DataFrame.
+  *
+  * This function processes missing values in a given column of a DataFrame using
+  * the specified strategy. It supports removal of rows with missing values or
+  * replacement of missing values with mean, median, or mode of the column.
+  *
+  * @param df Pointer to the DataFrame to be processed.
+  * @param column_index Index of the column to handle missing values in.
+  * @param strategy String specifying the strategy to handle missing values.
+  *                 Valid options are "remove", "mean", "median", or "mode".
+  *
+  * @return Pointer to the processed DataFrame if successful, NULL otherwise.
+  *         The original DataFrame is modified in place.
+  */
+ /**
+  * @brief Handles missing values in a specified column of a DataFrame.
+  *
+  * This function processes missing values in a given column of a DataFrame using
+  * the specified strategy. It supports removal of rows with missing values or
+  * replacement of missing values with mean, median, or mode of the column.
+  *
+  * @param df Pointer to the DataFrame to be processed.
+  * @param column_index Index of the column to handle missing values in.
+  * @param strategy String specifying the strategy to handle missing values.
+  *                 Valid options are "remove", "mean", "median", or "mode".
+  *
+  * @return Pointer to the processed DataFrame if successful, NULL otherwise.
+  *         The original DataFrame is modified in place.
+  */
  DataFrame* handle_missing_values(DataFrame *df, int column_index, const char *strategy) {
-    if (df == NULL || column_index < 0 || column_index >= df->num_columns) {
-        set_error("Invalid DataFrame or column index");
-        return NULL;
-    }
+     if (df == NULL || column_index < 0 || column_index >= df->num_columns) {
+         set_error("Invalid DataFrame or column index");
+         return NULL;
+     }
 
-    Column *column = &df->columns[column_index];
+     Column *column = &df->columns[column_index];
 
-    if (column->type != TYPE_FLOAT && column->type != TYPE_INT) {
-        set_error("Handling missing values is only implemented for float and int columns");
-        return NULL;
-    }
+     if (column->type != TYPE_FLOAT && column->type != TYPE_INT) {
+         set_error("Handling missing values is only implemented for float and int columns");
+         return NULL;
+     }
 
-    // Convert int column to float if necessary
-    if (column->type == TYPE_INT) {
-        float *new_data = malloc(df->num_rows * sizeof(float));
-        if (!new_data) {
-            set_error("Failed to allocate memory for float conversion");
-            return NULL;
-        }
+     // Convert int column to float if necessary
+     if (column->type == TYPE_INT) {
+         float *new_data = malloc(df->num_rows * sizeof(float));
+         if (!new_data) {
+             set_error("Failed to allocate memory for float conversion");
+             return NULL;
+         }
 
-        int *int_data = (int*)column->data;
-        for (int i = 0; i < df->num_rows; i++) {
-            if (int_data[i] == NULL_INT) {
-                new_data[i] = NAN;
-            } else {
-                new_data[i] = (float)int_data[i];
-            }
-        }
+         int *int_data = (int*)column->data;
+         for (int i = 0; i < df->num_rows; i++) {
+             if (int_data[i] == NULL_INT) {
+                 new_data[i] = NAN;
+             } else {
+                 new_data[i] = (float)int_data[i];
+             }
+         }
 
-        free(column->data);
-        column->data = new_data;
-        column->type = TYPE_FLOAT;
-    }
+         free(column->data);
+         column->data = new_data;
+         column->type = TYPE_FLOAT;
+     }
 
-    float *data = (float*)column->data;
+     float *data = (float*)column->data;
 
-    if (strcmp(strategy, "remove") == 0) {
-        // Remove rows with null values
-        int new_row_count = 0;
-        for (int i = 0; i < df->num_rows; i++) {
-            if (!isnan(data[i])) {
-                for (int j = 0; j < df->num_columns; j++) {
-                    size_t element_size;
-                    switch (df->columns[j].type) {
-                        case TYPE_INT:
-                            element_size = sizeof(int);
-                            break;
-                        case TYPE_FLOAT:
-                            element_size = sizeof(float);
-                            break;
-                        case TYPE_STRING:
-                            element_size = sizeof(char*);
-                            break;
-                        default:
-                            set_error("Unknown column type");
-                            return NULL;
-                    }
-                    memcpy((char*)df->columns[j].data + new_row_count * element_size,
-                           (char*)df->columns[j].data + i * element_size,
-                           element_size);
-                }
-                new_row_count++;
-            }
-        }
-        df->num_rows = new_row_count;
-    } else {
-        float replacement_value;
-        if (strcmp(strategy, "mean") == 0) {
-            replacement_value = calculate_mean(data, df->num_rows);
-        } else if (strcmp(strategy, "median") == 0) {
-            replacement_value = calculate_median(data, df->num_rows);
-        } else if (strcmp(strategy, "mode") == 0) {
-            replacement_value = calculate_mode(data, df->num_rows);
-        } else {
-            set_error("Invalid strategy for handling missing values");
-            return NULL;
-        }
+     if (strcmp(strategy, "remove") == 0) {
+         // Remove rows with null values
+         int new_row_count = 0;
+         for (int i = 0; i < df->num_rows; i++) {
+             if (!isnan(data[i])) {
+                 for (int j = 0; j < df->num_columns; j++) {
+                     size_t element_size;
+                     switch (df->columns[j].type) {
+                         case TYPE_INT:
+                             element_size = sizeof(int);
+                             break;
+                         case TYPE_FLOAT:
+                             element_size = sizeof(float);
+                             break;
+                         case TYPE_STRING:
+                             element_size = sizeof(char*);
+                             break;
+                         default:
+                             set_error("Unknown column type");
+                             return NULL;
+                     }
+                     memcpy((char*)df->columns[j].data + new_row_count * element_size,
+                            (char*)df->columns[j].data + i * element_size,
+                            element_size);
+                 }
+                 new_row_count++;
+             }
+         }
+         df->num_rows = new_row_count;
+     } else {
+         float replacement_value;
+         if (strcmp(strategy, "mean") == 0) {
+             replacement_value = calculate_mean(data, df->num_rows);
+         } else if (strcmp(strategy, "median") == 0) {
+             replacement_value = calculate_median(data, df->num_rows);
+         } else if (strcmp(strategy, "mode") == 0) {
+             replacement_value = calculate_mode(data, df->num_rows);
+         } else {
+             set_error("Invalid strategy for handling missing values");
+             return NULL;
+         }
 
-        if (isnan(replacement_value)) {
-            set_error("Unable to calculate replacement value (all values might be NaN)");
-            return NULL;
-        }
+         if (isnan(replacement_value)) {
+             set_error("Unable to calculate replacement value (all values might be NaN)");
+             return NULL;
+         }
 
-        // Replace missing values
-        for (int i = 0; i < df->num_rows; i++) {
-            if (isnan(data[i])) {
-                data[i] = replacement_value;
-            }
-        }
-    }
+         // Replace missing values
+         for (int i = 0; i < df->num_rows; i++) {
+             if (isnan(data[i])) {
+                 data[i] = replacement_value;
+             }
+         }
+     }
 
-    return df;
-}
+     return df;
+ }
+
 
 // Function to normalize a column
+/**
+ * @brief Normalizes a specified column in a DataFrame.
+ *
+ * This function creates a new DataFrame with all columns from the original,
+ * then normalizes the specified column to a range of [0, 1]. The normalization
+ * is performed using min-max scaling.
+ *
+ * @param df Pointer to the source DataFrame.
+ * @param column_index Index of the column to be normalized.
+ * @return Pointer to a new DataFrame with the normalized column, or NULL if an error occurs.
+ *         The caller is responsible for freeing the returned DataFrame.
+ */
 DataFrame* normalize_column(DataFrame *df, int column_index) {
     if (df == NULL || column_index < 0 || column_index >= df->num_columns) {
         set_error("Invalid DataFrame or column index");
@@ -836,6 +1133,21 @@ DataFrame* normalize_column(DataFrame *df, int column_index) {
     return new_df;
 }
 
+
+/**
+ * @brief Scales a specified column in a DataFrame to a new range.
+ *
+ * This function creates a new DataFrame with all columns from the original,
+ * then scales the specified column to a new range defined by new_min and new_max.
+ * The scaling is performed using min-max normalization.
+ *
+ * @param df Pointer to the source DataFrame.
+ * @param column_index Index of the column to be scaled.
+ * @param new_min The minimum value of the new range.
+ * @param new_max The maximum value of the new range.
+ * @return Pointer to a new DataFrame with the scaled column, or NULL if an error occurs.
+ *         The caller is responsible for freeing the returned DataFrame.
+ */
 DataFrame* scale_column(DataFrame *df, int column_index, float new_min, float new_max) {
     if (df == NULL || column_index < 0 || column_index >= df->num_columns) {
         set_error("Invalid DataFrame or column index");
@@ -889,6 +1201,19 @@ DataFrame* scale_column(DataFrame *df, int column_index, float new_min, float ne
 
 
 
+
+/**
+ * @brief Performs label encoding on a specified column in the DataFrame.
+ *
+ * This function applies label encoding to a categorical column, converting
+ * unique string values to integer labels. The original DataFrame is not
+ * modified; instead, a new DataFrame is returned with the encoded column.
+ *
+ * @param df Pointer to the source DataFrame.
+ * @param column_name Name of the column to be label encoded.
+ * @return Pointer to a new DataFrame with the label encoded column, or NULL if an error occurs.
+ *         The caller is responsible for freeing the returned DataFrame.
+ */
 DataFrame* label_encode(DataFrame *df, const char *column_name) {
     // Implementation for label encoding
     // This is a placeholder and should be implemented based on specific requirements
@@ -897,7 +1222,19 @@ DataFrame* label_encode(DataFrame *df, const char *column_name) {
 }
 
 
-// Helper function to determine the type of a string
+
+/**
+ * @brief Detects the data type of a given string.
+ *
+ * This function analyzes the content of a string to determine its data type.
+ * It can identify integers, floating-point numbers, and strings.
+ *
+ * @param str The input string to analyze.
+ * @return The detected ColumnType:
+ *         - TYPE_INT for integer values
+ *         - TYPE_FLOAT for floating-point values
+ *         - TYPE_STRING for all other cases, including empty strings
+ */
 ColumnType detect_type(const char *str) {
     int has_decimal = 0;
     int i = 0;
@@ -920,7 +1257,21 @@ ColumnType detect_type(const char *str) {
     return has_decimal ? TYPE_FLOAT : TYPE_INT;
 }
 
+
 // Function to add a column to the DataFrame
+/**
+ * @brief Adds a new column to the DataFrame from an array of strings.
+ *
+ * This function creates a new column in the DataFrame by converting an array of strings
+ * to the appropriate data type (int, float, or string) based on the content of the first
+ * non-null element. It handles null values and performs necessary memory allocations.
+ *
+ * @param df Pointer to the DataFrame to which the column will be added.
+ * @param name The name of the new column.
+ * @param data Array of strings containing the column data.
+ * @param num_rows The number of rows in the data array.
+ * @return 1 if the column was successfully added, 0 if an error occurred.
+ */
 int add_column_from_strings(DataFrame *df, const char *name, char **data, int num_rows) {
     if (df == NULL || data == NULL) {
         set_error("Invalid DataFrame or data");
@@ -933,6 +1284,7 @@ int add_column_from_strings(DataFrame *df, const char *name, char **data, int nu
         set_error("Memory allocation failed for column data: %s", name);
         return 0;
     }
+
 
     for (int i = 0; i < num_rows; i++) {
         // Check for null values
@@ -977,6 +1329,20 @@ int add_column_from_strings(DataFrame *df, const char *name, char **data, int nu
     return 1;
 }
 
+
+/**
+ * @brief Reads a CSV file and creates a DataFrame from its contents.
+ *
+ * This function opens the specified CSV file, reads its contents, and constructs
+ * a DataFrame object. It handles the parsing of headers and data rows, dynamically
+ * allocates memory as needed, and performs error checking throughout the process.
+ *
+ * @param filename The path to the CSV file to be read.
+ * @return A pointer to the newly created DataFrame containing the CSV data,
+ *         or NULL if an error occurs during the reading or parsing process.
+ *         The caller is responsible for freeing the returned DataFrame using
+ *         the appropriate deallocation function.
+ */
 DataFrame* read_csv(const char *filename) {
     FILE *file = fopen(filename, "r");
     if (file == NULL) {
@@ -1080,7 +1446,7 @@ DataFrame* read_csv(const char *filename) {
         set_error("Memory allocation failed for column data");
         // ... (error handling code remains the same)
     }
-    
+
     for (int j = 0; j < num_rows; j++) {
         char *line = data[j];
         for (int k = 0; k < i; k++) {
@@ -1091,7 +1457,7 @@ DataFrame* read_csv(const char *filename) {
             }
             line++; // Move past the comma
         }
-        
+
         if (line != NULL) {
             char *end = strchr(line, ',');
             if (end == NULL) {
@@ -1151,6 +1517,18 @@ DataFrame* read_csv(const char *filename) {
     return df;
 }
 
+
+/**
+ * @brief Prints the contents of a DataFrame to a file in a formatted table.
+ *
+ * This function writes the DataFrame data to a specified file, formatting it as a table
+ * with aligned columns. It includes a serial number column, handles different data types,
+ * and represents NULL values appropriately.
+ *
+ * @param df Pointer to the DataFrame to be printed.
+ * @param filename The name of the file where the formatted table will be written.
+ * @return Returns 1 if the operation was successful, 0 if an error occurred.
+ */
 int print_dataframe_s(DataFrame *df, const char *filename) {
     if (df == NULL || filename == NULL) {
         set_error("Invalid DataFrame or filename");
@@ -1247,6 +1625,18 @@ int print_dataframe_s(DataFrame *df, const char *filename) {
     return 1;
 }
 
+
+/**
+ * @brief Writes the contents of a DataFrame to a CSV file.
+ *
+ * This function takes a DataFrame and writes its contents to a CSV (Comma-Separated Values) file.
+ * It writes the column names as the header and then writes each row of data.
+ * The function handles different data types (int, float, string) appropriately.
+ *
+ * @param df Pointer to the DataFrame to be written to the file.
+ * @param filename The name of the file to write the CSV data to.
+ * @return Returns 1 if the operation was successful, 0 if an error occurred (e.g., file couldn't be opened).
+ */
 int write_csv(DataFrame *df, const char *filename) {
     FILE *file = fopen(filename, "w");
     if (file == NULL) {
@@ -1293,6 +1683,22 @@ int write_csv(DataFrame *df, const char *filename) {
     fclose(file);
     return 1;
 }
+
+/**
+ * @brief Retrieves a column from a DataFrame as a contiguous array.
+ *
+ * This function extracts a specified column from the given DataFrame and returns
+ * it as a contiguous array of the appropriate data type. It also provides the
+ * column's data type through the 'type' parameter.
+ *
+ * @param df Pointer to the DataFrame containing the column to be extracted.
+ * @param column_index The index of the column to be extracted.
+ * @param type Pointer to a ColumnType variable where the column's data type will be stored.
+ *
+ * @return A void pointer to the newly allocated array containing the column data.
+ *         Returns NULL if an error occurs (e.g., invalid input, memory allocation failure).
+ *         The caller is responsible for freeing the returned memory.
+ */
 void* get_column_as_array(DataFrame *df, int column_index, ColumnType *type) {
     if (df == NULL || column_index < 0 || column_index >= df->num_columns) {
         set_error("Invalid DataFrame or column index");
@@ -1329,6 +1735,17 @@ void* get_column_as_array(DataFrame *df, int column_index, ColumnType *type) {
     return array;
 }
 
+
+/**
+ * @brief Get the size of a single element in a column based on its type.
+ *
+ * This function returns the size in bytes of a single element in a column,
+ * given the column's data type.
+ *
+ * @param type The ColumnType enum value representing the data type of the column.
+ * @return The size in bytes of a single element of the specified type.
+ *         Returns 0 if the column type is unknown or invalid.
+ */
 size_t get_column_element_size(ColumnType type) {
     switch (type) {
         case TYPE_INT:
@@ -1342,6 +1759,18 @@ size_t get_column_element_size(ColumnType type) {
             return 0;
     }
 }
+
+/**
+ * @brief Appends two DataFrames vertically.
+ *
+ * This function combines two DataFrames by appending the rows of the second DataFrame
+ * to the first one. Both DataFrames must have the same number of columns.
+ *
+ * @param df1 Pointer to the first DataFrame to be appended.
+ * @param df2 Pointer to the second DataFrame to be appended.
+ * @return A pointer to a new DataFrame containing the combined data of df1 and df2.
+ *         Returns NULL if an error occurs (e.g., invalid input, memory allocation failure).
+ */
 DataFrame* append_dataframe(DataFrame *df1, DataFrame *df2) {
     if (df1 == NULL || df2 == NULL) {
         set_error("Invalid DataFrame(s)");
@@ -1384,7 +1813,22 @@ DataFrame* append_dataframe(DataFrame *df1, DataFrame *df2) {
 }
 
 
+
 // ascending 1 for ascending order and 0 for descending order
+/**
+ * @brief Sorts a DataFrame based on a specified column.
+ *
+ * This function creates a new DataFrame that is a sorted version of the input DataFrame.
+ * The sorting is performed based on the values in the specified column.
+ *
+ * @param df Pointer to the DataFrame to be sorted.
+ * @param column_index The index of the column to sort by.
+ * @param ascending Flag to determine the sort order: 1 for ascending, 0 for descending.
+ *
+ * @return A pointer to a new DataFrame containing the sorted data.
+ *         Returns NULL if an error occurs (e.g., invalid input, memory allocation failure).
+ *         The caller is responsible for freeing the returned DataFrame using free_dataframe().
+ */
 DataFrame* sort_dataframe(DataFrame *df, int column_index, int ascending) {
     if (df == NULL || column_index < 0 || column_index >= df->num_columns) {
         set_error("Invalid DataFrame or column index");
@@ -1466,7 +1910,22 @@ DataFrame* sort_dataframe(DataFrame *df, int column_index, int ascending) {
 }
 
 
+
 // Function to change a single value in a column
+/**
+ * @brief Changes a single value in a specified cell of the DataFrame.
+ *
+ * This function modifies the value at the given row and column indices in the DataFrame.
+ * It handles different data types (int, float, string) appropriately.
+ *
+ * @param df Pointer to the DataFrame to be modified.
+ * @param row_index The index of the row where the value should be changed.
+ * @param column_index The index of the column where the value should be changed.
+ * @param new_value Pointer to the new value to be set. The type should match the column's data type.
+ *
+ * @return Returns 1 if the operation was successful, 0 if an error occurred 
+ *         (e.g., invalid input, memory allocation failure).
+ */
 int change_value(DataFrame *df, int row_index, int column_index, void *new_value) {
     if (df == NULL || row_index < 0 || row_index >= df->num_rows || 
         column_index < 0 || column_index >= df->num_columns) {
@@ -1511,6 +1970,27 @@ int change_value(DataFrame *df, int row_index, int column_index, void *new_value
 
     return 1;
 }
+
+/**
+ * @brief Deletes a column from the DataFrame.
+ *
+ * This function removes a specified column from the DataFrame, freeing associated memory
+ * and adjusting the DataFrame structure accordingly.
+ *
+ * @param df Pointer to the DataFrame from which the column will be deleted.
+ * @param column_index The index of the column to be deleted.
+ * @return Returns 1 if the column was successfully deleted, 0 if an error occurred.
+ */
+/**
+ * @brief Deletes a column from the DataFrame.
+ *
+ * This function removes a specified column from the DataFrame, freeing associated memory
+ * and adjusting the DataFrame structure accordingly.
+ *
+ * @param df Pointer to the DataFrame from which the column will be deleted.
+ * @param column_index The index of the column to be deleted.
+ * @return Returns 1 if the column was successfully deleted, 0 if an error occurred.
+ */
 int delete_column(DataFrame *df, int column_index) {
     if (df == NULL || column_index < 0 || column_index >= df->num_columns) {
         set_error("Invalid DataFrame or column index");
@@ -1549,6 +2029,24 @@ int delete_column(DataFrame *df, int column_index) {
 
     return 1;
 }
+
+
+
+/**
+ * @brief Replaces all occurrences of a specified value with a new value in a DataFrame column.
+ *
+ * This function iterates through a specified column in the DataFrame and replaces
+ * all instances of the old value with the new value. It supports INT, FLOAT, and STRING
+ * column types.
+ *
+ * @param df Pointer to the DataFrame containing the column to be modified.
+ * @param column_index The index of the column in which to replace values.
+ * @param old_value Pointer to the value to be replaced. The type should match the column's data type.
+ * @param new_value Pointer to the new value to replace the old value. The type should match the column's data type.
+ *
+ * @return The number of values that were replaced. Returns 0 if an error occurred
+ *         (e.g., invalid input, unsupported column type, or memory allocation failure).
+ */
 int replace_value(DataFrame *df, int column_index, void *old_value, void *new_value) {
     if (df == NULL || column_index < 0 || column_index >= df->num_columns) {
         set_error("Invalid DataFrame or column index");
@@ -1613,6 +2111,18 @@ int replace_value(DataFrame *df, int column_index, void *old_value, void *new_va
 }
 
 
+
+
+/**
+ * @brief Prints the unique values in a DataFrame column.
+ *
+ * This function prints the unique values in a specified column of the DataFrame.
+ * It supports INT, FLOAT, and STRING column types.
+ *
+ * @param df Pointer to the DataFrame containing the column to be analyzed.
+ * @param column_index The index of the column to analyze.
+ * @return The number of unique values found in the column. Returns 0 if an error occurs.
+ */
 int print_unique_values(DataFrame *df, int column_index) {
     
     if (df == NULL || column_index < 0 || column_index >= df->num_columns) {
@@ -1725,6 +2235,21 @@ int print_unique_values(DataFrame *df, int column_index) {
     return unique_count;
 }
 
+/**
+ * @brief Splits a DataFrame into features (X) and target (y) for machine learning tasks.
+ *
+ * This function separates the specified target column from the input DataFrame,
+ * creating a new DataFrame with the remaining columns as features (X) and
+ * extracting the target column as a separate array (y).
+ *
+ * @param df Pointer to the input DataFrame to be split.
+ * @param target_column Name of the column to be used as the target variable.
+ * @param y Pointer to a void pointer that will store the extracted target column data.
+ *
+ * @return A pointer to a new DataFrame containing all columns except the target column (X).
+ *         Returns NULL if an error occurs (e.g., invalid input, memory allocation failure).
+ *         The caller is responsible for freeing the returned DataFrame and the target array.
+ */
 DataFrame* split_dataframe(DataFrame* df, const char* target_column, void** y) {
     if (df == NULL || target_column == NULL) {
         return NULL;
@@ -1771,7 +2296,21 @@ DataFrame* split_dataframe(DataFrame* df, const char* target_column, void** y) {
     return X;
 }
 
+
 #include <math.h>
+/**
+ * @brief Performs matrix multiplication of two matrices A and B, storing the result in matrix C.
+ *
+ * This function multiplies matrix A (m x n) with matrix B (n x p) and stores the result in matrix C (m x p).
+ * The matrices are represented as 1D arrays in row-major order.
+ *
+ * @param A Pointer to the first input matrix A (m x n)
+ * @param B Pointer to the second input matrix B (n x p)
+ * @param C Pointer to the output matrix C (m x p) where the result will be stored
+ * @param m Number of rows in matrix A and C
+ * @param n Number of columns in matrix A and number of rows in matrix B
+ * @param p Number of columns in matrix B and C
+ */
 void matrix_multiply(float *A, float *B, float *C, int m, int n, int p) {
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < p; j++) {
@@ -1783,7 +2322,20 @@ void matrix_multiply(float *A, float *B, float *C, int m, int n, int p) {
     }
 }
 
+
 // Helper function for matrix transpose
+/**
+ * @brief Computes the transpose of a matrix.
+ *
+ * This function calculates the transpose of matrix A and stores the result in matrix AT.
+ * The input matrix A is assumed to be in row-major order, and the output matrix AT
+ * will be in column-major order.
+ *
+ * @param A Pointer to the input matrix A (m x n) in row-major order
+ * @param AT Pointer to the output matrix AT (n x m) where the transpose will be stored
+ * @param m Number of rows in the input matrix A
+ * @param n Number of columns in the input matrix A
+ */
 void matrix_transpose(float *A, float *AT, int m, int n) {
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
@@ -1792,7 +2344,21 @@ void matrix_transpose(float *A, float *AT, int m, int n) {
     }
 }
 
+
 // Helper function for matrix inversion (using Gauss-Jordan elimination)
+/**
+ * @brief Computes the inverse of a square matrix using Gauss-Jordan elimination.
+ *
+ * This function calculates the inverse of the input matrix A using the Gauss-Jordan
+ * elimination method. The inverse is computed in-place, overwriting the original matrix.
+ *
+ * @param A Pointer to the input square matrix to be inverted. On successful completion,
+ *          this will contain the inverted matrix.
+ * @param n The dimension of the square matrix (number of rows or columns).
+ *
+ * @return Returns 1 if the matrix inversion was successful, 0 if the matrix is singular
+ *         or if memory allocation fails.
+ */
 int matrix_inverse(float *A, int n) {
     float *temp = malloc(n * n * sizeof(float));
     if (temp == NULL) {
@@ -1838,6 +2404,19 @@ int matrix_inverse(float *A, int n) {
     free(identity);
     return 1;
 }
+
+/**
+ * @brief Creates a new linear regression model.
+ *
+ * This function allocates memory for a LinearRegressionModel structure and initializes
+ * its members. It sets up the model with the specified number of features, allocating
+ * memory for the coefficients and initializing the intercept.
+ *
+ * @param num_features The number of features (independent variables) in the model.
+ *
+ * @return A pointer to the newly created LinearRegressionModel structure.
+ *         Returns NULL if memory allocation fails.
+ */
 LinearRegressionModel* create_linear_regression_model(int num_features) {
     LinearRegressionModel *model = malloc(sizeof(LinearRegressionModel));
     if (model == NULL) {
@@ -1853,6 +2432,18 @@ LinearRegressionModel* create_linear_regression_model(int num_features) {
     return model;
 }
 
+
+/**
+ * @brief Frees the memory allocated for a LinearRegressionModel.
+ *
+ * This function deallocates the memory used by a LinearRegressionModel,
+ * including its coefficients and the model structure itself.
+ *
+ * @param model Pointer to the LinearRegressionModel to be freed.
+ *              If NULL, the function does nothing.
+ *
+ * @return This function does not return a value.
+ */
 void free_linear_regression_model(LinearRegressionModel *model) {
     if (model) {
         free(model->coefficients);
@@ -1860,6 +2451,21 @@ void free_linear_regression_model(LinearRegressionModel *model) {
     }
 }
 
+
+/**
+ * @brief Fits a linear regression model using the given features and target values.
+ *
+ * This function performs linear regression using the ordinary least squares method.
+ * It computes the coefficients and intercept for the linear model based on the input
+ * features (X) and target values (y).
+ *
+ * @param model Pointer to the LinearRegressionModel structure to be fitted.
+ * @param X Pointer to the DataFrame containing the feature data.
+ * @param y Pointer to an array of float values representing the target variable.
+ *
+ * @return Returns 1 if the fitting process was successful, 0 if an error occurred
+ *         (e.g., invalid input, memory allocation failure, or singular matrix).
+ */
 int fit_linear_regression(LinearRegressionModel *model, DataFrame *X, float *y) {
     if (model == NULL || X == NULL || y == NULL || X->num_columns != model->num_features) {
         return 0;
@@ -1946,6 +2552,21 @@ int fit_linear_regression(LinearRegressionModel *model, DataFrame *X, float *y) 
     return 1;
 }
 
+
+/**
+ * @brief Predicts target values using a trained linear regression model.
+ *
+ * This function applies the linear regression model to the input features
+ * to generate predictions. It supports both float and integer feature types.
+ *
+ * @param model Pointer to the trained LinearRegressionModel.
+ * @param X Pointer to the DataFrame containing the input features.
+ *
+ * @return A pointer to a dynamically allocated array of float values
+ *         containing the predictions. The caller is responsible for freeing
+ *         this memory. Returns NULL if an error occurs (e.g., invalid input
+ *         or memory allocation failure).
+ */
 float* predict_linear_regression(LinearRegressionModel *model, DataFrame *X) {
     if (model == NULL || X == NULL || X->num_columns != model->num_features) {
         return NULL;
@@ -1971,6 +2592,20 @@ float* predict_linear_regression(LinearRegressionModel *model, DataFrame *X) {
     return predictions;
 }
 
+
+/**
+ * @brief Calculates the R-squared (coefficient of determination) value for a set of predictions.
+ *
+ * This function computes the R-squared value, which measures the proportion of the variance 
+ * in the dependent variable that is predictable from the independent variable(s).
+ *
+ * @param y_true Pointer to an array of float values representing the true (observed) values.
+ * @param y_pred Pointer to an array of float values representing the predicted values.
+ * @param n The number of elements in both y_true and y_pred arrays.
+ *
+ * @return The R-squared value as a float, ranging from 0 to 1. 
+ *         A value closer to 1 indicates a better fit of the model.
+ */
 float calculate_r_squared(float *y_true, float *y_pred, int n) {
     float mean_y = 0.0f;
     for (int i = 0; i < n; i++) {
@@ -1987,6 +2622,20 @@ float calculate_r_squared(float *y_true, float *y_pred, int n) {
     return 1 - (ss_res / ss_tot);
 }
 
+
+/**
+ * @brief Calculates the Mean Squared Error (MSE) between true and predicted values.
+ *
+ * This function computes the Mean Squared Error, which is a measure of the average
+ * squared difference between the predicted values and the true values. It is commonly
+ * used to evaluate the performance of regression models.
+ *
+ * @param y_true Pointer to an array of float values representing the true (observed) values.
+ * @param y_pred Pointer to an array of float values representing the predicted values.
+ * @param n The number of elements in both y_true and y_pred arrays.
+ *
+ * @return The Mean Squared Error as a float value. A lower MSE indicates better model performance.
+ */
 float calculate_mse(float *y_true, float *y_pred, int n) {
     float mse = 0.0f;
     for (int i = 0; i < n; i++) {
