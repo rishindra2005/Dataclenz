@@ -89,6 +89,71 @@ The library includes error handling mechanisms:
 - `set_error`: Sets an error message that can be accessed globally.
 - `debug_log`: Logs debug messages for tracing and debugging purposes.
 
+## Compilation and Installation
+
+Follow these steps to compile the Dataclenz library and set up your project structure:
+
+### For Windows:
+
+1. Open a command prompt and navigate to the Dataclenz source directory.
+
+2. Compile the library:
+```    gcc -c clenzdat.c -o clenzdat.o ```
+
+3. Create a static library:
+```    ar rcs libclenzdat.a clenzdat.o ```
+
+4. Create a shared library (DLL):
+```    gcc -shared -o clenzdat.dll clenzdat.c -lclenzdat ```
+
+
+5. Organize your project structure:
+- Create the following directories if they don't exist: `include`, `lib`, and `src`
+- Move `clenzdat.h` to the `include` directory
+- Move `libclenzdat.a` and `clenzdat.dll` to the `lib` directory
+- Keep your `sample.c` (or other source files) in the `src` directory
+
+6. Compile your program (replace `sample.c` with your source file):
+
+
+### For Linux:
+
+1. Open a terminal and navigate to the Dataclenz source directory.
+
+2. Compile the library:
+```    gcc -c -fPIC clenzdat.c -o clenzdat.o ```
+
+3. Create a static library:
+```    ar rcs libclenzdat.a clenzdat.o ```
+
+4. Create a shared library:
+```   gcc -shared -o libclenzdat.so clenzdat.o ```
+
+
+5. Organize your project structure:
+- Create the following directories if they don't exist: `include`, `lib`, and `src`
+- Move `clenzdat.h` to the `include` directory
+- Move `libclenzdat.a` and `libclenzdat.so` to the `lib` directory
+- Keep your `sample.c` (or other source files) in the `src` directory
+
+6. Compile your program (replace `sample.c` with your source file):
+
+
+
+### Using the Library
+
+After compilation, you can use the Dataclenz library in your C programs by including the header file and linking against the library:
+
+``` 
+#include <clenzdat.h>
+
+int main() {
+ // Your code using Dataclenz functions
+ return 0;
+}
+``` 
+``` gcc -o your_program your_program.c -lm -lclenzdat ```
+
 ## Contributing
 
 Contributions to the Dataclenz library are welcome. Please ensure that you follow the existing code style and include appropriate documentation for any new features or changes.
@@ -128,3 +193,4 @@ Risheendra. (2025). Dataclenz: A C library for data manipulation and analysis. G
   journal = {GitHub repository},
   url = {https://github.com/github.com/rishindra2005/Dataclenz}
 }
+```
