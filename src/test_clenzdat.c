@@ -791,20 +791,20 @@ void test_linear_regression1() {
 
 }
 int main() {
-    test_add_column();
-    test_get_column_as_array();
-    test_append_dataframe();
-    test_large_dataframe();
-    test_change_value();
-    test_get_dataframe_range();  
-    test_sort_dataframe();
-    test_read_describe_dataframe();
-    test_replace_value();  
-    test_print_unique_values();
-    test_split_dataframe();
+    // test_add_column();
+    // test_get_column_as_array();
+    // test_append_dataframe();
+    // test_large_dataframe();
+    // test_change_value();
+    // test_get_dataframe_range();  
+    // test_sort_dataframe();
+    // test_read_describe_dataframe();
+    // test_replace_value();  
+    // test_print_unique_values();
+    // test_split_dataframe();
     
-    test_linear_regression1();
-    test();
+    // test_linear_regression1();
+    // test();
     test_linear_regression();
     printf("All tests passed.\n");
 

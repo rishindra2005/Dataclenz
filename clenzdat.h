@@ -97,7 +97,25 @@ void free_dataframe(DataFrame *df);
  *         The caller is responsible for freeing the returned DataFrame using free_dataframe().
  */
 DataFrame* read_csv(const char *filename);
+
+
+
+/**
+ * @brief Adds a new column to the DataFrame.
+ *
+ * This function adds a new column to the specified DataFrame with the given name,
+ * data type, data, and length.
+ *
+ * @param df Pointer to the DataFrame to which the column will be added.
+ * @param name The name of the new column.
+ * @param type The data type of the new column (TYPE_INT, TYPE_FLOAT, or TYPE_STRING).
+ * @param data Pointer to the data to be added to the new column.
+ * @param length The number of elements in the data array.
+ *
+ * @return Returns 0 on success, or a non-zero value on failure.
+ */
 int add_column(DataFrame *df, const char *name, ColumnType type, void *data, int length);
+
 
 
 /**
@@ -676,6 +694,22 @@ void set_error(const char *format, ...);
  *       log levels, timestamps, or output redirection.
  */
 void debug_log(const char *format, ...);
+/**
+ * @brief Retrieves the version number of the DataClenz library.
+ *
+ * This function returns a string containing the current version number
+ * of the DataClenz library. The version follows semantic versioning
+ * format (MAJOR.MINOR.PATCH).
+ *
+ * @return A pointer to a constant character string representing
+ *         the version number of the DataClenz library.
+ *         The returned string should not be modified or freed by the caller.
+ */
+const char* get_dataclenz_version() {
+    return "1.0.0";
+}
+
+
 
 #endif
 

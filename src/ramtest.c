@@ -88,18 +88,18 @@ void test_linear_regression1() {
     printf("Mean Squared Error: %.4f\n", mse);
 
     // Print coefficients and intercept
-    // printf("Coefficients:\n");
-    // for (int i = 0; i < X->num_columns; i++) {
-    //     printf("%s: %.4f\n", X->column_names[i], model->coefficients[i]);
-    // }
-    // printf("Intercept: %.4f\n", model->intercept);    
+    printf("Coefficients:\n");
+    for (int i = 0; i < X->num_columns; i++) {
+        printf("%s: %.4f\n", X->column_names[i], model->coefficients[i]);
+    }
+    printf("Intercept: %.4f\n", model->intercept);    
 
     // Clean up
-    // free_linear_regression_model(model);
-    // free_dataframe(df);
-    // free_dataframe(X);
-    // free(y);
-    // free(y_pred);
+    free_linear_regression_model(model);
+    free_dataframe(df);
+    free_dataframe(X);
+    free(y);
+    free(y_pred);
     printf("Linear regression test completed.\n");
     scanf("%d");
 
