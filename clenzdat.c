@@ -1328,191 +1328,170 @@ int add_column_from_strings(DataFrame *df, const char *name, char **data, int nu
     free(column_data);
     return 1;
 }
+static int count_columns(const char *line) {
+    int count = 1;
+    for (const char *p = line; *p; p++) {
+        if (*p == ',') count++;
+    }
+    return count;
+}
 
+// Helper function to parse a CSV line
+static char** parse_csv_line(char *line, int num_columns) {
+    char **row = malloc(num_columns * sizeof(char*));
+    if (!row) return NULL;
 
-/**
- * @brief Reads a CSV file and creates a DataFrame from its contents.
- *
- * This function opens the specified CSV file, reads its contents, and constructs
- * a DataFrame object. It handles the parsing of headers and data rows, dynamically
- * allocates memory as needed, and performs error checking throughout the process.
- *
- * @param filename The path to the CSV file to be read.
- * @return A pointer to the newly created DataFrame containing the CSV data,
- *         or NULL if an error occurs during the reading or parsing process.
- *         The caller is responsible for freeing the returned DataFrame using
- *         the appropriate deallocation function.
- */
+    char *token = strtok(line, ",");
+    for (int i = 0; i < num_columns && token; i++) {
+        row[i] = strdup(token);
+        token = strtok(NULL, ",");
+    }
+
+    return row;
+}
+
+#ifdef _WIN32
+DWORD WINAPI read_csv_chunk(LPVOID arg) {
+#else
+void* read_csv_chunk(void* arg) {
+#endif
+    ThreadArgs *args = (ThreadArgs*)arg;
+    char buffer[BUFFER_SIZE];
+    char line[MAX_STRING_LENGTH * MAX_COLUMNS];
+    int line_pos = 0;
+    int num_columns = 0;
+
+    fseek(args->file, args->start_pos, SEEK_SET);
+
+    while (ftell(args->file) < args->end_pos) {
+        size_t bytes_read = fread(buffer, 1, sizeof(buffer), args->file);
+        if (bytes_read == 0) break;
+
+        for (size_t i = 0; i < bytes_read; i++) {
+            if (buffer[i] == '\n') {
+                line[line_pos] = '\0';
+                if (num_columns == 0) {
+                    num_columns = count_columns(line);
+                }
+
+                char **row = parse_csv_line(line, num_columns);
+                if (row) {
+                    mutex_lock(args->mutex);
+                    if (*args->num_rows >= *args->capacity) {
+                        *args->capacity *= 2;
+                        *args->data = realloc(*args->data, *args->capacity * sizeof(char**));
+                    }
+                    (*args->data)[*args->num_rows] = row;
+                    (*args->num_rows)++;
+                    mutex_unlock(args->mutex);
+                }
+                line_pos = 0;
+            } else if (line_pos < sizeof(line) - 1) {
+                line[line_pos++] = buffer[i];
+            }
+        }
+    }
+
+    #ifdef _WIN32
+    return 0;
+    #else
+    return NULL;
+    #endif
+}
 DataFrame* read_csv(const char *filename) {
     FILE *file = fopen(filename, "r");
-    if (file == NULL) {
-        set_error("Unable to open file: %s", filename);
+    if (!file) {
+        fprintf(stderr, "Error opening file: %s\n", filename);
+        return NULL;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    char ***data = malloc(sizeof(char**) * CHUNK_SIZE);
+    int num_rows = 0;
+    int capacity = CHUNK_SIZE;
+
+    thread_handle threads[NUM_THREADS];
+    ThreadArgs thread_args[NUM_THREADS];
+    mutex_handle mutex;
+    mutex_init(&mutex);
+
+    long chunk_size = file_size / NUM_THREADS;
+    long start_pos = 0;
+
+    for (int i = 0; i < NUM_THREADS; i++) {
+        thread_args[i].file = file;
+        thread_args[i].start_pos = start_pos;
+        thread_args[i].end_pos = (i == NUM_THREADS - 1) ? file_size : start_pos + chunk_size;
+        thread_args[i].data = &data;
+        thread_args[i].num_rows = &num_rows;
+        thread_args[i].capacity = &capacity;
+        thread_args[i].mutex = &mutex;
+
+        #ifdef _WIN32
+        threads[i] = CreateThread(NULL, 0, read_csv_chunk, &thread_args[i], 0, NULL);
+        #else
+        pthread_create(&threads[i], NULL, read_csv_chunk, &thread_args[i]);
+        #endif
+
+        start_pos += chunk_size;
+    }
+
+    for (int i = 0; i < NUM_THREADS; i++) {
+        #ifdef _WIN32
+        WaitForSingleObject(threads[i], INFINITE);
+        CloseHandle(threads[i]);
+        #else
+        pthread_join(threads[i], NULL);
+        #endif
+    }
+
+    mutex_destroy(&mutex);
+    fclose(file);
+
+    if (num_rows == 0) {
+        free(data);
         return NULL;
     }
 
     DataFrame *df = create_dataframe();
-    if (df == NULL) {
-        fclose(file);
-        return NULL;
-    }
-
-    char line[MAX_STRING_LENGTH * MAX_COLUMNS];
-    char *token;
-    char *headers[MAX_COLUMNS];
-    int num_columns = 0;
-    char **data = NULL;
-    int num_rows = 0;
-    int capacity = 1000;  // Initial capacity
-
-    // Read headers
-    if (fgets(line, sizeof(line), file) == NULL) {
-        set_error("File is empty: %s", filename);
-        free_dataframe(df);
-        fclose(file);
-        return NULL;
-    }
-
-    token = strtok(line, ",\n");
-    while (token != NULL && num_columns < MAX_COLUMNS) {
-        headers[num_columns] = strdup(token);
-        if (headers[num_columns] == NULL) {
-            set_error("Memory allocation failed for header: %s", token);
-            free_dataframe(df);
-            fclose(file);
-            return NULL;
-        }
-        num_columns++;
-        token = strtok(NULL, ",\n");
-    }
-
-    // Allocate initial memory for data
-    data = (char **)malloc(capacity * sizeof(char *));
-    if (data == NULL) {
-        set_error("Memory allocation failed for data");
-        free_dataframe(df);
-        fclose(file);
-        return NULL;
-    }
-
-    // Read data
-    while (fgets(line, sizeof(line), file) != NULL) {
-        if (num_rows >= capacity) {
-            capacity *= 2;
-            data = (char **)realloc(data, capacity * sizeof(char *));
-            if (data == NULL) {
-                set_error("Memory reallocation failed for data");
-                free_dataframe(df);
-                fclose(file);
-                return NULL;
-            }
-        }
-        data[num_rows] = strdup(line);
-    if (data[num_rows] == NULL) {
-        set_error("Memory allocation failed for row: %d", num_rows);
-        free_dataframe(df);
-        fclose(file);
-        return NULL;
-    }
-    num_rows++;
-    }
-
-    fclose(file);
-
-    if (num_rows == 0) {
-        set_error("No data rows found in file: %s", filename);
-        for (int i = 0; i < num_columns; i++) {
-            free(headers[i]);
-        }
-        free(data);
-        free_dataframe(df);
-        return NULL;
-    }
-
-        // Resize the DataFrame to accommodate all rows
-    if (!resize_dataframe(df, num_rows)) {
-        set_error("Failed to resize DataFrame");
+    if (!df) {
         for (int i = 0; i < num_rows; i++) {
             free(data[i]);
         }
         free(data);
-        free_dataframe(df);
         return NULL;
     }
 
-    // Add columns using the new function
-    for (int i = 0; i < num_columns; i++) {
-    char **column_data = malloc(num_rows * sizeof(char*));
-    if (column_data == NULL) {
-        set_error("Memory allocation failed for column data");
-        // ... (error handling code remains the same)
+    // Assume the first row contains column names
+    df->num_columns = count_columns(data[0][0]);
+    df->column_names = malloc(df->num_columns * sizeof(char*));
+    for (int i = 0; i < df->num_columns; i++) {
+        df->column_names[i] = strdup(data[0][i]);
     }
 
-    for (int j = 0; j < num_rows; j++) {
-        char *line = data[j];
-        for (int k = 0; k < i; k++) {
-            line = strchr(line, ',');
-            if (line == NULL) {
-                column_data[j] = strdup("");
-                break;
-            }
-            line++; // Move past the comma
-        }
-
-        if (line != NULL) {
-            char *end = strchr(line, ',');
-            if (end == NULL) {
-                end = line + strlen(line);
-                // Remove newline character if it's the last column
-                if (end > line && (*(end-1) == '\n' || *(end-1) == '\r')) {
-                    end--;
-                }
-                if (end > line && (*(end-1) == '\n' || *(end-1) == '\r')) {
-                    end--;
-                }
-            }
-            int len = end - line;
-            column_data[j] = malloc(len + 1);
-            if (column_data[j] == NULL) {
-                column_data[j] = strdup("");
-            } else {
-                strncpy(column_data[j], line, len);
-                column_data[j][len] = '\0';
-            }
-        } else {
-            column_data[j] = strdup("");
-        }
+    // Allocate columns
+    df->columns = malloc(df->num_columns * sizeof(Column));
+    for (int i = 0; i < df->num_columns; i++) {
+        df->columns[i].type = TYPE_STRING; // Default to string type
+        df->columns[i].length = num_rows - 1; // Exclude header row
+        df->columns[i].data = malloc(df->columns[i].length * sizeof(char*));
     }
 
-        if (!add_column_from_strings(df, headers[i], column_data, num_rows)) {
-            set_error("Failed to add column: %s", headers[i]);
-            for (int j = 0; j < num_rows; j++) {
-                free(column_data[j]);
-            }
-            free(column_data);
-            for (int j = 0; j < num_rows; j++) {
-                free(data[j]);
-            }
-            free(data);
-            for (int j = 0; j < num_columns; j++) {
-                free(headers[j]);
-            }
-            free_dataframe(df);
-            return NULL;
+    // Fill columns with data
+    for (int i = 1; i < num_rows; i++) { // Start from 1 to skip header
+        for (int j = 0; j < df->num_columns; j++) {
+            ((char**)df->columns[j].data)[i-1] = strdup(data[i][j]);
         }
-        for (int j = 0; j < num_rows; j++) {
-            free(column_data[j]);
-        }
-        free(column_data);
-    }
-
-    // Clean up
-    for (int i = 0; i < num_columns; i++) {
-        free(headers[i]);
-    }
-    for (int i = 0; i < num_rows; i++) {
         free(data[i]);
     }
+    free(data[0]); // Free header row
     free(data);
+
+    df->num_rows = num_rows - 1; // Exclude header row
+    df->max_rows = df->num_rows;
 
     return df;
 }
@@ -2643,4 +2622,22 @@ float calculate_mse(float *y_true, float *y_pred, int n) {
         mse += error * error;
     }
     return mse / n;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const char* get_dataclenz_version() {
+    return "2.0.0";
 }

@@ -5,9 +5,38 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#ifdef _WIN32
+#include <windows.h>
+#define thread_handle HANDLE
+#define thread_func DWORD WINAPI
+#else
+#include <pthread.h>
+#define thread_handle pthread_t
+#define thread_func void*
+#endif
 
 #define MAX_COLUMNS 1000
 #define MAX_STRING_LENGTH 256
+#define BUFFER_SIZE 1048576  // 16 KB buffer
+#define NUM_THREADS 4
+#define CHUNK_SIZE (1024 * 1024)  // 1MB chunk size
+
+
+
+#ifdef _WIN32
+#define mutex_handle CRITICAL_SECTION
+#define mutex_init(m) InitializeCriticalSection(m)
+#define mutex_lock(m) EnterCriticalSection(m)
+#define mutex_unlock(m) LeaveCriticalSection(m)
+#define mutex_destroy(m) DeleteCriticalSection(m)
+#else
+#define mutex_handle pthread_mutex_t
+#define mutex_init(m) pthread_mutex_init(m, NULL)
+#define mutex_lock(m) pthread_mutex_lock(m)
+#define mutex_unlock(m) pthread_mutex_unlock(m)
+#define mutex_destroy(m) pthread_mutex_destroy(m)
+#endif
+
 
 typedef enum {
     TYPE_INT,
@@ -33,7 +62,15 @@ typedef struct {
     float intercept;
     int num_features;
 } LinearRegressionModel;
-
+typedef struct {
+    FILE *file;
+    long start_pos;
+    long end_pos;
+    char ***data;
+    int *num_rows;
+    int *capacity;
+    mutex_handle *mutex;
+} ThreadArgs;
 
 
 // DataFrame operations
@@ -705,9 +742,7 @@ void debug_log(const char *format, ...);
  *         the version number of the DataClenz library.
  *         The returned string should not be modified or freed by the caller.
  */
-const char* get_dataclenz_version() {
-    return "1.0.0";
-}
+const char* get_dataclenz_version();
 
 
 

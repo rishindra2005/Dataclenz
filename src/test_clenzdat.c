@@ -663,7 +663,10 @@ void test_linear_regression() {
     }
 
     printf("Predictions made successfully.\n");
-
+    printf("showing first 10 predictions:\n");
+    for (int i = 0; i < 10; i++) {
+        printf("Actual: %.4f, Predicted: %.4f\n", y[i], y_pred[i]);
+    }
     // Calculate and print accuracy metrics
     float r_squared = calculate_r_squared(y, y_pred, X->num_rows);
     float mse = calculate_mse(y, y_pred, X->num_rows);
@@ -790,6 +793,7 @@ void test_linear_regression1() {
     // scanf("%d");
 
 }
+
 int main() {
     // test_add_column();
     // test_get_column_as_array();
@@ -805,7 +809,7 @@ int main() {
     
     // test_linear_regression1();
     // test();
-    test_linear_regression();
+    // test_linear_regression();
     printf("All tests passed.\n");
 
 

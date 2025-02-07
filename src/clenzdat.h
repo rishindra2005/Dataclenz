@@ -39,6 +39,7 @@ void free_dataframe(DataFrame *df);
 int add_column(DataFrame *df, const char *name, ColumnType type, void *data, int length);
 int delete_column(DataFrame *df, int column_index) ;
 void print_dataframe(DataFrame *df);
+size_t get_type_size(ColumnType type);
 
 // Data preprocessing functions
 /*
@@ -75,6 +76,7 @@ int* shape_df(DataFrame *df);
 DataFrame* get_dataframe_range(DataFrame *df, int start_row, int end_row);
 DataFrame* sort_dataframe(DataFrame *df, int column_index, int ascending);
 size_t get_column_element_size(ColumnType type);
+DataFrame* read_csv_d(const char *filename, char delimiter);
 
 // New function prototype
 DataFrame* describe_dataframe(DataFrame *df);
@@ -82,6 +84,8 @@ int print_dataframe_s(DataFrame *df, const char *filename);
 
 // Add this new function prototype
 int resize_dataframe(DataFrame *df, int new_size);
+int find_column_index(DataFrame *df, const char *column_name);
+
 DataFrame* split_dataframe(DataFrame* df, const char* target_column, void** y);
 // Add these function declarations   Linear regression functions
 
@@ -99,6 +103,8 @@ float calculate_mse(float *y_true, float *y_pred, int n);
 // Error handling
 extern char error_message[256];
 void set_error(const char *format, ...);
+const char* get_error();
+
 
 #endif
 

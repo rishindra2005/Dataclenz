@@ -421,6 +421,61 @@ void test_read_describe_dataframe() {
     }
     free_dataframe(df);
 }
+void test_read_describe_dataframe_t() {
+    clock_t start_total, end_total, start, end;
+    double cpu_time_used;
+
+    start_total = clock();
+    printf("\nTesting read_describe_dataframe()...\n");
+
+    // Read CSV
+    start = clock();
+    DataFrame *df = read_csv("train.csv");
+    end = clock();
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    printf("Time taken to read CSV: %.6f seconds\n", cpu_time_used);
+
+    if (df == NULL) {
+        printf("Failed to read CSV file.\n");
+        return;
+    }
+    print_dataframe(df);
+
+    // Describe DataFrame
+    start = clock();
+    DataFrame *description = describe_dataframe(df);
+    end = clock();
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    printf("Time taken to describe DataFrame: %.6f seconds\n", cpu_time_used);
+
+    if (description != NULL) {
+        printf("\nDescription of DataFrame:\n");
+        print_dataframe(description);
+
+        // Write CSV
+        start = clock();
+        int write_result = write_csv(description, "description.csv");
+        end = clock();
+        cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+        printf("Time taken to write CSV: %.6f seconds\n", cpu_time_used);
+
+        if (write_result == 0) {
+            printf("Description successfully written to description.csv\n");
+        } else {
+            printf("Failed to write description to CSV.\n");
+        }
+
+        free_dataframe(description);
+    } else {
+        printf("Failed to generate description.\n");
+    }
+
+    free_dataframe(df);
+
+    end_total = clock();
+    cpu_time_used = ((double) (end_total - start_total)) / CLOCKS_PER_SEC;
+    printf("Total time for test_read_describe_dataframe: %.6f seconds\n", cpu_time_used);
+}
 void test(){
     clock_t start, end;
     float cpu_time_used;
@@ -664,19 +719,20 @@ void test_split_dataframe() {
 
 // }
 int main() {
-    test_add_column();
-    test_get_column_as_array();
-    test_append_dataframe();
-    test_large_dataframe();
-    test_change_value();
-    test_get_dataframe_range();  
-    test_sort_dataframe();
-    test_read_describe_dataframe();
-    test_replace_value();  
-    test_print_unique_values();
-    test_split_dataframe();
-    test_linear_regression();
-    test();
+    // test_add_column();
+    // test_get_column_as_array();
+    // test_append_dataframe();
+    // test_large_dataframe();
+    // test_change_value();
+    // test_get_dataframe_range();  
+    // test_sort_dataframe();
+    // test_read_describe_dataframe();
+    test_read_describe_dataframe_t();
+    // test_replace_value();  
+    // test_print_unique_values();
+    // test_split_dataframe();
+    // test_linear_regression();
+    // test();
 
 
     return 0;
