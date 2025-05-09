@@ -1,0 +1,129 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage{textcomp}  % This fixes the textquotedbl issues
+\usepackage{csquotes} % Added for proper quotation handling
+\usepackage{minted}
+
+% Define colors for code syntax highlighting
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+% Configure listings for code
+\lstset{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegray},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2,
+    literate={"}{\textquotedbl}1 % Handle double quotes properly
+}
+
+\lstdefinestyle{c}{
+    language=C,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!60!black}\itshape,
+    stringstyle=\color{red},
+    literate={"}{\textquotedbl}1 % Handle double quotes in C style too
+}
+
+% Configure page style
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\leftmark}
+\fancyhead[R]{\thepage}
+\fancyfoot[C]{Dataclenz Search Algorithm Analysis}
+
+% Fix headheight warning
+\setlength{\headheight}{15pt}
+
+% Configure chapter title format
+\titleformat{\chapter}[display]
+{\normalfont\huge\bfseries}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
+
+% Add a keywords command for the abstract
+\newcommand{\keywords}[1]{\vskip0.5em\noindent\textbf{Keywords:} #1}
+
+% Improve table and figure placement
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.7}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{5}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{1cm}
+    {\scshape\LARGE Dataclenz Library \par}
+    \vspace{1.5cm}
+    {\huge\bfseries Comprehensive Analysis of Search Algorithms: \\ Binary Search vs Jump Search Performance \par}
+    \vspace{2cm}
+    {\Large\itshape A Research Study on Time and Space Complexity Analysis \par}
+    \vfill
+    {\large \today\par}
+\end{titlepage}
+
+\tableofcontents
+\listoffigures
+\listoftables
+
+\chapter*{Preface}
+\addcontentsline{toc}{chapter}{Preface}
+This document presents a comprehensive analysis of search algorithms implemented in the Dataclenz library. It focuses on the performance comparison between Binary Search and Jump Search algorithms across various dataset sizes and types. The research aims to provide insights into the practical implications of theoretical time and space complexity differences between these algorithms.
+
+% Include chapters
+\include{chapters/abstract}
+\include{chapters/introduction}
+\include{chapters/methodology}
+\include{chapters/design}
+\include{chapters/implementation}
+\include{chapters/results}
+\include{chapters/discussion}
+\include{chapters/future_directions}
+\include{chapters/conclusion}
+
+\appendix
+\chapter{Appendix A: Full Result Tables}
+\section{Synthetic Dataset Results}
+% Here you would include the full table of results
+
+\section{Real-World Dataset Results}
+% Here you would include the full table of real-world results
+
+\chapter{Appendix B: Code Listings}
+\section{Complete Implementation of Binary Search}
+% Full code listing of binary search
+
+\section{Complete Implementation of Jump Search}
+% Full code listing of jump search
+
+\end{document}

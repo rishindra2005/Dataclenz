@@ -6,7 +6,6 @@
 #include <windows.h>
 #include <psapi.h>
 
-
 #define MAX_FILENAME_LENGTH 256
 #define MAX_COLUMN_NAME_LENGTH 100
 SIZE_T get_memory_usage() {

@@ -1,0 +1,97 @@
+\chapter{Methodology}
+
+This chapter describes the experimental methodology employed to evaluate search algorithm performance, including the theoretical foundation, testing environment, dataset generation, and metrics collection.
+
+\section{Theoretical Foundation}
+
+\subsection{Binary Search}
+Binary Search operates by repeatedly dividing the search interval in half. With each iteration, it determines which half the target element must lie in and eliminates the other half from consideration.
+
+\begin{itemize}
+    \item \textbf{Time Complexity:} O(log n)
+    \item \textbf{Space Complexity:} O(1)
+    \item \textbf{Key Insight:} Each comparison eliminates half of the remaining elements
+\end{itemize}
+
+The algorithm begins by comparing the target value to the middle element of the sorted array. If they match, the search is complete. If the target is smaller, the search continues in the lower half; if larger, in the upper half. This process repeats until the target is found or the search space becomes empty.
+
+The logarithmic time complexity stems from the halving of the search space with each comparison: an array of n elements requires at most $\log_2 n$ comparisons to locate an element.
+
+\subsection{Jump Search}
+Jump Search works by jumping ahead by fixed steps, then performing a linear search once a potential range is identified.
+
+\begin{itemize}
+    \item \textbf{Time Complexity:} O(sqrt(n))
+    \item \textbf{Space Complexity:} O(1)
+    \item \textbf{Key Insight:} Optimal step size is sqrt(n) to minimize worst-case comparisons
+\end{itemize}
+
+The algorithm begins at the first element and jumps ahead by a fixed step size (typically sqrt(n)). It continues jumping until it finds a value greater than the target, then performs a linear search in the last block. This approach bridges the gap between O(n) linear search and O(log n) binary search.
+
+\section{Testing Environment}
+
+All experiments were conducted using the Dataclenz library's implementation of Binary Search and Jump Search algorithms. The tests were run on a consistent hardware configuration to ensure comparable results across all experiments.
+
+\subsection{Hardware and Software Specifications}
+\begin{itemize}
+    \item \textbf{Processor:} Intel Core i7
+    \item \textbf{Memory:} 16GB RAM
+    \item \textbf{Operating System:} Windows 10
+    \item \textbf{Compiler:} GCC 9.3.0 with optimization level -O2
+\end{itemize}
+
+\section{Dataset Generation}
+
+\subsection{Synthetic Datasets}
+For controlled testing, synthetic datasets were generated with the following characteristics:
+\begin{itemize}
+    \item \textbf{Dataset Sizes:} 50, 100, 500, 1000, 5000, 10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000 elements
+    \item \textbf{Data Types:} Integers, Floats, Strings
+    \item \textbf{Distribution:} Random values with uniform distribution
+\end{itemize}
+
+Each dataset was sorted before applying search algorithms, as both Binary Search and Jump Search require sorted input.
+
+\subsection{Real-world Datasets}
+To validate findings on practical applications, tests were also conducted on real-world datasets:
+\begin{itemize}
+    \item \textbf{Housing Dataset:} 20,640 records with numerical features (median house value, median income)
+    \item \textbf{MoMA Artists Dataset:} Records containing mixed data types including strings (artist names, nationalities) and numeric values
+\end{itemize}
+
+\section{Performance Metrics}
+
+The following metrics were collected for each algorithm across all datasets:
+
+\begin{itemize}
+    \item \textbf{Search Time:} Average execution time per search operation (in seconds)
+    \item \textbf{Comparisons:} Average number of comparisons performed during search
+    \item \textbf{Success Rate:} Percentage of searches that successfully found the target element
+    \item \textbf{Memory Usage:} Estimated memory consumption during search operations (in KB)
+\end{itemize}
+
+\section{Experimental Design}
+
+For each combination of algorithm, dataset size, and data type:
+
+\begin{enumerate}
+    \item A dataset was generated or loaded and sorted
+    \item 1,000 search operations were performed with randomly selected target elements
+    \item Performance metrics were recorded and averaged
+    \item Results were saved to CSV files for further analysis
+\end{enumerate}
+
+This approach ensured statistical significance and minimized the impact of outliers or system-specific variations.
+
+\section{Analysis Methods}
+
+The collected data was analyzed using:
+
+\begin{itemize}
+    \item \textbf{Comparative Analysis:} Direct comparison of Binary Search and Jump Search performance
+    \item \textbf{Scaling Analysis:} Evaluation of how performance scales with dataset size
+    \item \textbf{Regression Analysis:} Fitting performance curves to verify theoretical complexity
+    \item \textbf{Visualization:} Creation of logarithmic plots to highlight scaling relationships
+\end{itemize}
+
+Python with Pandas and Matplotlib was used to process the raw data and generate visualizations, enabling clear identification of performance trends and thresholds.

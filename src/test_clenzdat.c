@@ -3,7 +3,7 @@
 #include <string.h>
 #include <time.h>
 
-#include <clenzdat.h>
+#include "clenzdat.h"
 // #include <clenzdat.h>
 
 void test_add_column() {
@@ -692,106 +692,282 @@ void test_linear_regression() {
     printf("Linear regression test completed.\n");
 }
 
-
-void test_linear_regression1() {
-    printf("\nTesting linear regression...\n");
-
-    // Read the housing.csv file
-    DataFrame* df = read_csv("large_sample.csv");
-    if (df == NULL) {
-        printf("Failed to read housing.csv file.\n");
-        return;
-    }
+// Add new test functions for binary search, jump search, and sorting
+void test_df_sort() {
+    printf("\nTesting df_sort()...\n");
     
-
-   
-    float* y;
-    DataFrame* X = split_dataframe(df, "result", (void**)&y);
-
-    if (X == NULL || y == NULL) {
-        printf("Failed to split DataFrame.\n");
-        free_dataframe(df);
+    DataFrame *df = create_dataframe();
+    if (df == NULL) {
+        printf("Failed to create DataFrame.\n");
         return;
     }
 
-    printf("X shape after split: (%d, %d)\n", X->num_rows, X->num_columns);
+    // Create test data with mixed types
+    int int_data[] = {30, 10, 50, 20, 40};
+    float float_data[] = {3.5, 1.2, 5.7, 2.1, 4.8};
+    char *string_data[] = {"orange", "apple", "watermelon", "banana", "grape"};
 
-    // Check for NaN or inf values in X and y
-    for (int i = 0; i < X->num_rows; i++) {
-        for (int j = 0; j < X->num_columns; j++) {
-            float value = ((float*)X->columns[j].data)[i];
-            if (isnan(value) || isinf(value)) {
-                printf("Warning: NaN or inf value found in X at row %d, column %d\n", i, j);
-            }
-        }
-        if (isnan(y[i]) || isinf(y[i])) {
-            printf("Warning: NaN or inf value found in y at index %d\n", i);
-        }
+    add_column(df, "Age", TYPE_INT, int_data, 5);
+    add_column(df, "Score", TYPE_FLOAT, float_data, 5);
+    add_column(df, "Fruit", TYPE_STRING, string_data, 5);
+
+    printf("Original DataFrame:\n");
+    print_dataframe(df);
+
+    // Test sorting by int column
+    DataFrame *sorted_by_age = df_sort("Age", df);
+    if (sorted_by_age != NULL) {
+        printf("\nDataFrame sorted by Age:\n");
+        print_dataframe(sorted_by_age);
+    } else {
+        printf("Failed to sort DataFrame by Age.\n");
     }
 
-    // Create and fit the linear regression model
-    LinearRegressionModel* model = create_linear_regression_model(X->num_columns);
-    if (model == NULL) {
-        printf("Failed to create linear regression model.\n");
-        free_dataframe(df);
-        free_dataframe(X);
-        free(y);
-        return;
+    // Test sorting by float column
+    DataFrame *sorted_by_score = df_sort("Score", df);
+    if (sorted_by_score != NULL) {
+        printf("\nDataFrame sorted by Score:\n");
+        print_dataframe(sorted_by_score);
+    } else {
+        printf("Failed to sort DataFrame by Score.\n");
     }
 
-    printf("Fitting linear regression model...\n");
-    clock_t start = clock();
-    if (!fit_linear_regression(model, X, y)) {
-        printf("Failed to fit linear regression model.\n");
-        free_linear_regression_model(model);
-        free_dataframe(df);
-        free_dataframe(X);
-        free(y);
-        return;
+    // Test sorting by string column
+    DataFrame *sorted_by_fruit = df_sort("Fruit", df);
+    if (sorted_by_fruit != NULL) {
+        printf("\nDataFrame sorted by Fruit (alphabetically):\n");
+        print_dataframe(sorted_by_fruit);
+    } else {
+        printf("Failed to sort DataFrame by Fruit.\n");
     }
-    clock_t end  = clock();
-    double cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-
-    printf("Model fitted successfully.\n");
-    printf("Time taken to fit the model: %.4f seconds\n", cpu_time_used);
-
-    // Make predictions
-    float* y_pred = predict_linear_regression(model, X);
-    if (y_pred == NULL) {
-        printf("Failed to make predictions.\n");
-        free_linear_regression_model(model);
-        free_dataframe(df);
-        free_dataframe(X);
-        free(y);
-        return;
-    }
-
-    printf("Predictions made successfully.\n");
-
-    // Calculate and print accuracy metrics
-    float r_squared = calculate_r_squared(y, y_pred, X->num_rows);
-    float mse = calculate_mse(y, y_pred, X->num_rows);
-
-    printf("Linear Regression Results:\n");
-    printf("R-squared: %.4f\n", r_squared);
-    printf("Mean Squared Error: %.4f\n", mse);
-
-    // Print coefficients and intercept
-    // printf("Coefficients:\n");
-    // for (int i = 0; i < X->num_columns; i++) {
-    //     printf("%s: %.4f\n", X->column_names[i], model->coefficients[i]);
-    // }
-    // printf("Intercept: %.4f\n", model->intercept);    
 
     // Clean up
-    free_linear_regression_model(model);
-    free_dataframe(df);
-    free_dataframe(X);
-    free(y);
-    free(y_pred);
-    printf("Linear regression test completed.\n");
-    // scanf("%d");
+    // free_dataframe(df);
+    // if (sorted_by_age) free_dataframe(sorted_by_age);
+    // if (sorted_by_score) free_dataframe(sorted_by_score);
+    // if (sorted_by_fruit) free_dataframe(sorted_by_fruit);
+}
 
+void test_binary_search() {
+    printf("\nTesting binary_search()...\n");
+    
+    DataFrame *df = create_dataframe();
+    if (df == NULL) {
+        printf("Failed to create DataFrame.\n");
+        return;
+    }
+
+    // Create sorted test data
+    int int_data[] = {10, 20, 30, 30, 40, 50};
+    float float_data[] = {1.1, 2.2, 3.3, 3.3, 4.4, 5.5};
+    char *string_data[] = {"apple", "banana", "cherry", "cherry", "grape", "orange"};
+
+    add_column(df, "ID", TYPE_INT, int_data, 6);
+    add_column(df, "Value", TYPE_FLOAT, float_data, 6);
+    add_column(df, "Name", TYPE_STRING, string_data, 6);
+
+    printf("Test DataFrame (already sorted):\n");
+    print_dataframe(df);
+
+    // Allocate array for found indices
+    int max_indices = df->num_rows;
+    int *found_indices = (int*)malloc(max_indices * sizeof(int));
+    if (found_indices == NULL) {
+        printf("Memory allocation failed for found_indices array.\n");
+        free_dataframe(df);
+        return;
+    }
+
+    // Test binary search on int column
+    printf("\nBinary search for int value 30:\n");
+    int target_int = 30;
+    int found_count = binary_search(df, 0, &target_int, found_indices, max_indices);
+    printf("Found %d occurrences at indices: ", found_count);
+    for (int i = 0; i < found_count; i++) {
+        printf("%d ", found_indices[i]);
+    }
+    printf("\n");
+
+    // Test binary search on float column
+    printf("\nBinary search for float value 3.3:\n");
+    float target_float = 3.3f;
+    found_count = binary_search(df, 1, &target_float, found_indices, max_indices);
+    printf("Found %d occurrences at indices: ", found_count);
+    for (int i = 0; i < found_count; i++) {
+        printf("%d ", found_indices[i]);
+    }
+    printf("\n");
+
+    // Test binary search on string column
+    printf("\nBinary search for string value 'cherry':\n");
+    char *target_string = "cherry";
+    found_count = binary_search(df, 2, target_string, found_indices, max_indices);
+    printf("Found %d occurrences at indices: ", found_count);
+    for (int i = 0; i < found_count; i++) {
+        printf("%d ", found_indices[i]);
+    }
+    printf("\n");
+
+    // Test binary search for non-existent value
+    printf("\nBinary search for int value 25 (not in DataFrame):\n");
+    target_int = 25;
+    found_count = binary_search(df, 0, &target_int, found_indices, max_indices);
+    printf("Found %d occurrences\n", found_count);
+
+    // Clean up
+    // free(found_indices);
+    // free_dataframe(df);
+}
+
+void test_jump_search() {
+    printf("\nTesting jump_search()...\n");
+    
+    DataFrame *df = create_dataframe();
+    if (df == NULL) {
+        printf("Failed to create DataFrame.\n");
+        return;
+    }
+
+    // Create sorted test data
+    int int_data[] = {10, 20, 30, 30, 40, 50, 60, 70, 80, 90};
+    float float_data[] = {1.1, 2.2, 3.3, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9};
+    char *string_data[] = {"apple", "banana", "cherry", "cherry", "grape", "orange", "peach", "pear", "plum", "watermelon"};
+
+    add_column(df, "ID", TYPE_INT, int_data, 10);
+    add_column(df, "Value", TYPE_FLOAT, float_data, 10);
+    add_column(df, "Name", TYPE_STRING, string_data, 10);
+
+    printf("Test DataFrame (already sorted):\n");
+    print_dataframe(df);
+
+    // Allocate array for found indices
+    int max_indices = df->num_rows;
+    int *found_indices = (int*)malloc(max_indices * sizeof(int));
+    if (found_indices == NULL) {
+        printf("Memory allocation failed for found_indices array.\n");
+        free_dataframe(df);
+        return;
+    }
+
+    // Test jump search on int column
+    printf("\nJump search for int value 30:\n");
+    int target_int = 30;
+    int found_count = jump_search(df, 0, &target_int, found_indices, max_indices);
+    printf("Found %d occurrences at indices: ", found_count);
+    for (int i = 0; i < found_count; i++) {
+        printf("%d ", found_indices[i]);
+    }
+    printf("\n");
+
+    // Test jump search on float column
+    printf("\nJump search for float value 3.3:\n");
+    float target_float = 3.3f;
+    found_count = jump_search(df, 1, &target_float, found_indices, max_indices);
+    printf("Found %d occurrences at indices: ", found_count);
+    for (int i = 0; i < found_count; i++) {
+        printf("%d ", found_indices[i]);
+    }
+    printf("\n");
+
+    // Test jump search on string column
+    printf("\nJump search for string value 'cherry':\n");
+    char *target_string = "cherry";
+    found_count = jump_search(df, 2, target_string, found_indices, max_indices);
+    printf("Found %d occurrences at indices: ", found_count);
+    for (int i = 0; i < found_count; i++) {
+        printf("%d ", found_indices[i]);
+    }
+    printf("\n");
+
+    // Test jump search for non-existent value
+    printf("\nJump search for int value 25 (not in DataFrame):\n");
+    target_int = 25;
+    found_count = jump_search(df, 0, &target_int, found_indices, max_indices);
+    printf("Found %d occurrences\n", found_count);
+
+    // Clean up
+    // free(found_indices);
+    // free_dataframe(df);
+}
+
+void test_df_search() {
+    printf("\nTesting df_search()...\n");
+    
+    DataFrame *df = create_dataframe();
+    if (df == NULL) {
+        printf("Failed to create DataFrame.\n");
+        return;
+    }
+
+    // Create test data
+    int int_data[] = {10, 20, 30, 30, 40, 50};
+    float float_data[] = {1.1, 2.2, 3.3, 3.3, 4.4, 5.5};
+    char *string_data[] = {"apple", "banana", "cherry", "cherry", "grape", "orange"};
+
+    add_column(df, "ID", TYPE_INT, int_data, 6);
+    add_column(df, "Value", TYPE_FLOAT, float_data, 6);
+    add_column(df, "Name", TYPE_STRING, string_data, 6);
+
+    printf("Original DataFrame:\n");
+    print_dataframe(df);
+
+    // Sort the DataFrame by ID
+    DataFrame *sorted_df = df_sort("ID", df);
+    if (sorted_df == NULL) {
+        printf("Failed to sort DataFrame.\n");
+        free_dataframe(df);
+        return;
+    }
+
+    printf("\nSorted DataFrame by ID:\n");
+    print_dataframe(sorted_df);
+
+    // Test df_search with int value
+    printf("\nSearching for rows with ID = 30:\n");
+    DataFrame *result_int = df_search("30", sorted_df);
+    if (result_int != NULL) {
+        print_dataframe(result_int);
+        free_dataframe(result_int);
+    } else {
+        printf("No rows found with ID = 30\n");
+    }
+
+    // Sort the DataFrame by Name
+    DataFrame *sorted_by_name = df_sort("Name", df);
+    if (sorted_by_name == NULL) {
+        printf("Failed to sort DataFrame by Name.\n");
+        free_dataframe(df);
+        free_dataframe(sorted_df);
+        return;
+    }
+
+    printf("\nSorted DataFrame by Name:\n");
+    print_dataframe(sorted_by_name);
+
+    // Test df_search with string value - NOTE: Pass the raw string without quotes
+    printf("\nSearching for rows with Name = 'cherry':\n");
+    DataFrame *result_str = df_search("cherry", sorted_by_name);
+    if (result_str != NULL) {
+        print_dataframe(result_str);
+        free_dataframe(result_str);
+    } else {
+        printf("No rows found with Name = 'cherry'\n");
+    }
+
+    // Test searching for non-existent value
+    printf("\nSearching for rows with ID = 25 (not in DataFrame):\n");
+    DataFrame *result_none = df_search("25", sorted_df);
+    if (result_none != NULL) {
+        print_dataframe(result_none);
+        free_dataframe(result_none);
+    } else {
+        printf("No rows found with ID = 25 (as expected)\n");
+    }
+
+    // Clean up
+    // free_dataframe(df);
+    // free_dataframe(sorted_df);
+    // free_dataframe(sorted_by_name);
 }
 
 int main() {
@@ -807,9 +983,15 @@ int main() {
     // test_print_unique_values();
     // test_split_dataframe();
     
-    // test_linear_regression1();
     // test();
     // test_linear_regression();
+    
+    // Add tests for new functions
+    test_df_sort();
+    test_binary_search();
+    test_jump_search();
+    test_df_search();
+    
     printf("All tests passed.\n");
 
 

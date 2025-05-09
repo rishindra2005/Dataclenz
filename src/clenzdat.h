@@ -98,13 +98,17 @@ float* predict_linear_regression(LinearRegressionModel *model, DataFrame *X);
 float calculate_r_squared(float *y_true, float *y_pred, int n);
 float calculate_mse(float *y_true, float *y_pred, int n);
 
-
+// New search and sort functions
+DataFrame* df_sort(const char* column_name, DataFrame* df);
+int binary_search(DataFrame* df, int column_index, void* target, int* found_indices, int max_indices);
+int jump_search(DataFrame* df, int column_index, void* target, int* found_indices, int max_indices);
+DataFrame* df_search(const char* search_value, DataFrame* sorted_df);
 
 // Error handling
 extern char error_message[256];
 void set_error(const char *format, ...);
 const char* get_error();
 
-
+// 41 functions
 #endif
 

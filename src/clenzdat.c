@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <float.h>
 #include <limits.h>
+#include <stdbool.h> // Add this for bool type support
 
 
 #define NULL_INT INT_MIN
@@ -2249,4 +2250,495 @@ float calculate_mse(float *y_true, float *y_pred, int n) {
         mse += error * error;
     }
     return mse / n;
+}
+
+// New functions for sorting and searching
+
+// Compare functions for different data types
+static int compare_int(const void* a, const void* b) {
+    return (*(int*)a - *(int*)b);
+}
+
+static int compare_float(const void* a, const void* b) {
+    float diff = *(float*)a - *(float*)b;
+    return (diff > 0) ? 1 : ((diff < 0) ? -1 : 0);
+}
+
+static int compare_string(const void* a, const void* b) {
+    return strcmp(*(char**)a, *(char**)b);
+}
+
+// Function to sort DataFrame by a specified column
+DataFrame* df_sort(const char* column_name, DataFrame* df) {
+    if (df == NULL || column_name == NULL) {
+        set_error("Invalid DataFrame or column name");
+        return NULL;
+    }
+
+    // Find the column index
+    int column_index = -1;
+    for (int i = 0; i < df->num_columns; i++) {
+        if (strcmp(df->column_names[i], column_name) == 0) {
+            column_index = i;
+            break;
+        }
+    }
+
+    if (column_index == -1) {
+        set_error("Column '%s' not found in DataFrame", column_name);
+        return NULL;
+    }
+
+    // Create a new sorted DataFrame
+    DataFrame* sorted_df = sort_dataframe(df, column_index, 1); // 1 for ascending order
+    if (sorted_df == NULL) {
+        set_error("Failed to sort DataFrame");
+        return NULL;
+    }
+
+    return sorted_df;
+}
+
+// Binary search function that returns indices of matching elements
+int binary_search(DataFrame* df, int column_index, void* target, int* found_indices, int max_indices) {
+    if (df == NULL || column_index < 0 || column_index >= df->num_columns || found_indices == NULL) {
+        set_error("Invalid parameters for binary search");
+        return 0;
+    }
+
+    Column* column = &df->columns[column_index];
+    int found_count = 0;
+    
+    // Binary search works only on sorted data
+    // First check if middle element exists
+    if (df->num_rows == 0) {
+        return 0;
+    }
+
+    int left = 0;
+    int right = df->num_rows - 1;
+    int mid = 0;
+    int compare_result = 0;
+
+    // Binary search to find any occurrence
+    while (left <= right) {
+        mid = left + (right - left) / 2;
+        
+        // Compare based on data type
+        switch (column->type) {
+            case TYPE_INT:
+                compare_result = *(int*)target - ((int*)column->data)[mid];
+                break;
+            case TYPE_FLOAT:
+                {
+                    float diff = *(float*)target - ((float*)column->data)[mid];
+                    compare_result = (diff > 0) ? 1 : ((diff < 0) ? -1 : 0);
+                }
+                break;
+            case TYPE_STRING:
+                compare_result = strcmp((char*)target, ((char**)column->data)[mid]);
+                break;
+            default:
+                set_error("Unsupported data type for binary search");
+                return 0;
+        }
+
+        if (compare_result == 0) {
+            // Found a match
+            found_indices[found_count++] = mid;
+            
+            // Check if we've reached the limit for found indices
+            if (found_count >= max_indices) {
+                break;
+            }
+            
+            // Search for more matches to the left
+            int left_ptr = mid - 1;
+            while (left_ptr >= 0) {
+                int compare_left = 0;
+                switch (column->type) {
+                    case TYPE_INT:
+                        compare_left = *(int*)target - ((int*)column->data)[left_ptr];
+                        break;
+                    case TYPE_FLOAT:
+                        {
+                            float diff = *(float*)target - ((float*)column->data)[left_ptr];
+                            compare_left = (diff > 0) ? 1 : ((diff < 0) ? -1 : 0);
+                        }
+                        break;
+                    case TYPE_STRING:
+                        compare_left = strcmp((char*)target, ((char**)column->data)[left_ptr]);
+                        break;
+                }
+                
+                if (compare_left == 0) {
+                    found_indices[found_count++] = left_ptr;
+                    if (found_count >= max_indices) break;
+                    left_ptr--;
+                } else {
+                    break;
+                }
+            }
+            
+            // Search for more matches to the right
+            int right_ptr = mid + 1;
+            while (right_ptr < df->num_rows && found_count < max_indices) {
+                int compare_right = 0;
+                switch (column->type) {
+                    case TYPE_INT:
+                        compare_right = *(int*)target - ((int*)column->data)[right_ptr];
+                        break;
+                    case TYPE_FLOAT:
+                        {
+                            float diff = *(float*)target - ((float*)column->data)[right_ptr];
+                            compare_right = (diff > 0) ? 1 : ((diff < 0) ? -1 : 0);
+                        }
+                        break;
+                    case TYPE_STRING:
+                        compare_right = strcmp((char*)target, ((char**)column->data)[right_ptr]);
+                        break;
+                }
+                
+                if (compare_right == 0) {
+                    found_indices[found_count++] = right_ptr;
+                    if (found_count >= max_indices) break;
+                    right_ptr++;
+                } else {
+                    break;
+                }
+            }
+            
+            return found_count;
+        } else if (compare_result < 0) {
+            right = mid - 1;
+        } else {
+            left = mid + 1;
+        }
+    }
+    
+    return found_count;
+}
+
+// Jump search function that returns indices of matching elements
+int jump_search(DataFrame* df, int column_index, void* target, int* found_indices, int max_indices) {
+    if (df == NULL || column_index < 0 || column_index >= df->num_columns || found_indices == NULL) {
+        set_error("Invalid parameters for jump search");
+        return 0;
+    }
+
+    Column* column = &df->columns[column_index];
+    int found_count = 0;
+    int n = df->num_rows;
+    
+    if (n == 0) {
+        return 0;
+    }
+    
+    // Finding block size to be jumped
+    int step = (int)sqrt(n);
+    
+    // Finding the block where element is present (if it is present)
+    int prev = 0;
+    int compare_result = 0;
+    
+    // Determine the comparison function based on data type
+    while (prev < n) {
+        switch (column->type) {
+            case TYPE_INT:
+                compare_result = *(int*)target - ((int*)column->data)[prev];
+                break;
+            case TYPE_FLOAT:
+                {
+                    float diff = *(float*)target - ((float*)column->data)[prev];
+                    compare_result = (diff > 0) ? 1 : ((diff < 0) ? -1 : 0);
+                }
+                break;
+            case TYPE_STRING:
+                compare_result = strcmp((char*)target, ((char**)column->data)[prev]);
+                break;
+            default:
+                set_error("Unsupported data type for jump search");
+                return 0;
+        }
+        
+        if (compare_result == 0) {
+            // Found a match
+            found_indices[found_count++] = prev;
+            
+            // Check for more matches in the vicinity
+            int left = prev - 1;
+            while (left >= 0 && found_count < max_indices) {
+                int compare_left = 0;
+                switch (column->type) {
+                    case TYPE_INT:
+                        compare_left = *(int*)target - ((int*)column->data)[left];
+                        break;
+                    case TYPE_FLOAT:
+                        {
+                            float diff = *(float*)target - ((float*)column->data)[left];
+                            compare_left = (diff > 0) ? 1 : ((diff < 0) ? -1 : 0);
+                        }
+                        break;
+                    case TYPE_STRING:
+                        compare_left = strcmp((char*)target, ((char**)column->data)[left]);
+                        break;
+                }
+                
+                if (compare_left == 0) {
+                    found_indices[found_count++] = left;
+                    left--;
+                } else {
+                    break;
+                }
+            }
+            
+            int right = prev + 1;
+            while (right < n && found_count < max_indices) {
+                int compare_right = 0;
+                switch (column->type) {
+                    case TYPE_INT:
+                        compare_right = *(int*)target - ((int*)column->data)[right];
+                        break;
+                    case TYPE_FLOAT:
+                        {
+                            float diff = *(float*)target - ((float*)column->data)[right];
+                            compare_right = (diff > 0) ? 1 : ((diff < 0) ? -1 : 0);
+                        }
+                        break;
+                    case TYPE_STRING:
+                        compare_right = strcmp((char*)target, ((char**)column->data)[right]);
+                        break;
+                }
+                
+                if (compare_right == 0) {
+                    found_indices[found_count++] = right;
+                    right++;
+                } else {
+                    break;
+                }
+            }
+            
+            return found_count;
+        } else if (compare_result < 0) {
+            // Element is in this block, perform linear search
+            break;
+        }
+        
+        prev = (prev + step < n) ? prev + step : n;
+    }
+    
+    // Linear search in the identified block
+    int i = prev - step;
+    if (i < 0) i = 0;
+    
+    while (i < n && i <= prev) {
+        int compare_linear = 0;
+        switch (column->type) {
+            case TYPE_INT:
+                compare_linear = *(int*)target - ((int*)column->data)[i];
+                break;
+            case TYPE_FLOAT:
+                {
+                    float diff = *(float*)target - ((float*)column->data)[i];
+                    compare_linear = (diff > 0) ? 1 : ((diff < 0) ? -1 : 0);
+                }
+                break;
+            case TYPE_STRING:
+                compare_linear = strcmp((char*)target, ((char**)column->data)[i]);
+                break;
+        }
+        
+        if (compare_linear == 0) {
+            // Found a match
+            found_indices[found_count++] = i;
+            
+            // Check for more matches linearly
+            int j = i + 1;
+            while (j < n && found_count < max_indices) {
+                int compare_next = 0;
+                switch (column->type) {
+                    case TYPE_INT:
+                        compare_next = *(int*)target - ((int*)column->data)[j];
+                        break;
+                    case TYPE_FLOAT:
+                        {
+                            float diff = *(float*)target - ((float*)column->data)[j];
+                            compare_next = (diff > 0) ? 1 : ((diff < 0) ? -1 : 0);
+                        }
+                        break;
+                    case TYPE_STRING:
+                        compare_next = strcmp((char*)target, ((char**)column->data)[j]);
+                        break;
+                }
+                
+                if (compare_next == 0) {
+                    found_indices[found_count++] = j;
+                    j++;
+                } else {
+                    break;
+                }
+            }
+            
+            return found_count;
+        }
+        
+        i++;
+    }
+    
+    return found_count;
+}
+
+// Function to search for rows containing a value and return a new DataFrame
+DataFrame* df_search(const char* search_value, DataFrame* sorted_df) {
+    if (sorted_df == NULL || search_value == NULL) {
+        set_error("Invalid parameters for df_search");
+        return NULL;
+    }
+    
+    // Initialize result DataFrame
+    DataFrame* result_df = create_dataframe();
+    if (result_df == NULL) {
+        return NULL;
+    }
+    
+    // Determine the search column based on the search value type and data in DataFrame
+    int search_column_index = -1;
+    ColumnType search_type = TYPE_STRING; // Default assumption
+    
+    // Try to determine if the search value is a number
+    char* endptr;
+    strtol(search_value, &endptr, 10);
+    bool is_int = (*endptr == '\0');
+    
+    strtod(search_value, &endptr);
+    bool is_float = (*endptr == '\0');
+    
+    // Find an appropriate column to search based on the value type
+    if (is_int) {
+        search_type = TYPE_INT;
+        // Look for the first integer column
+        for (int i = 0; i < sorted_df->num_columns; i++) {
+            if (sorted_df->columns[i].type == TYPE_INT) {
+                search_column_index = i;
+                break;
+            }
+        }
+    } else if (is_float) {
+        search_type = TYPE_FLOAT;
+        // Look for the first float column
+        for (int i = 0; i < sorted_df->num_columns; i++) {
+            if (sorted_df->columns[i].type == TYPE_FLOAT) {
+                search_column_index = i;
+                break;
+            }
+        }
+    } else {
+        search_type = TYPE_STRING;
+        // Look for the first string column
+        for (int i = 0; i < sorted_df->num_columns; i++) {
+            if (sorted_df->columns[i].type == TYPE_STRING) {
+                search_column_index = i;
+                break;
+            }
+        }
+    }
+    
+    // If no suitable column was found
+    if (search_column_index == -1) {
+        set_error("No suitable column found for search value type");
+        free_dataframe(result_df);
+        return NULL;
+    }
+    
+    // Create an array to hold the found indices
+    int max_indices = sorted_df->num_rows;
+    int* found_indices = (int*)malloc(max_indices * sizeof(int));
+    if (found_indices == NULL) {
+        set_error("Memory allocation failed");
+        free_dataframe(result_df);
+        return NULL;
+    }
+    
+    // Prepare the search target based on the column type
+    void* target = NULL;
+    int target_int;
+    float target_float;
+    
+    switch (sorted_df->columns[search_column_index].type) {
+        case TYPE_INT:
+            target_int = atoi(search_value);
+            target = &target_int;
+            break;
+        case TYPE_FLOAT:
+            target_float = atof(search_value);
+            target = &target_float;
+            break;
+        case TYPE_STRING:
+            target = (void*)search_value;
+            break;
+        default:
+            set_error("Unsupported data type for search");
+            free(found_indices);
+            free_dataframe(result_df);
+            return NULL;
+    }
+    
+    // Perform binary search
+    int found_count = binary_search(sorted_df, search_column_index, target, found_indices, max_indices);
+    
+    if (found_count == 0) {
+        free(found_indices);
+        free_dataframe(result_df);
+        set_error("No matching rows found");
+        return NULL;
+    }
+    
+    // Create columns for the result DataFrame
+    for (int col = 0; col < sorted_df->num_columns; col++) {
+        Column* src_column = &sorted_df->columns[col];
+        void* new_data = malloc(found_count * get_column_element_size(src_column->type));
+        if (new_data == NULL) {
+            set_error("Memory allocation failed");
+            free(found_indices);
+            free_dataframe(result_df);
+            return NULL;
+        }
+        
+        // Copy the data for the found indices
+        for (int i = 0; i < found_count; i++) {
+            int row_idx = found_indices[i];
+            switch (src_column->type) {
+                case TYPE_INT:
+                    ((int*)new_data)[i] = ((int*)src_column->data)[row_idx];
+                    break;
+                case TYPE_FLOAT:
+                    ((float*)new_data)[i] = ((float*)src_column->data)[row_idx];
+                    break;
+                case TYPE_STRING:
+                    ((char**)new_data)[i] = strdup(((char**)src_column->data)[row_idx]);
+                    if (((char**)new_data)[i] == NULL) {
+                        set_error("Memory allocation failed for string copy");
+                        free(new_data);
+                        free(found_indices);
+                        free_dataframe(result_df);
+                        return NULL;
+                    }
+                    break;
+            }
+        }
+        
+        // Add the column to the result DataFrame
+        if (!add_column(result_df, sorted_df->column_names[col], src_column->type, new_data, found_count)) {
+            set_error("Failed to add column to result DataFrame");
+            free(new_data);
+            free(found_indices);
+            free_dataframe(result_df);
+            return NULL;
+        }
+        
+        free(new_data);
+    }
+    
+    free(found_indices);
+    return result_df;
 }

@@ -1,0 +1,16 @@
+\babel@toc {english}{}\relax 
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {5.1}{\ignorespaces Comparison of average search time between Binary Search and Jump Search across dataset sizes (log scale)}}{26}{figure.5.1}%
+\contentsline {figure}{\numberline {5.2}{\ignorespaces Number of comparisons by data type for Binary Search and Jump Search}}{27}{figure.5.2}%
+\contentsline {figure}{\numberline {5.3}{\ignorespaces Memory usage comparison between Binary Search and Jump Search}}{27}{figure.5.3}%
+\contentsline {figure}{\numberline {5.4}{\ignorespaces Search success rate comparison between Binary Search and Jump Search}}{28}{figure.5.4}%
+\contentsline {figure}{\numberline {5.5}{\ignorespaces Theoretical time complexity comparison between Binary Search, Jump Search, and Linear Search}}{29}{figure.5.5}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }

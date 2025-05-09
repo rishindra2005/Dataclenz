@@ -1,0 +1,127 @@
+\chapter{Design}
+
+This chapter outlines the architectural design decisions and data structures used in implementing the search algorithms within the Dataclenz library.
+
+\section{System Architecture}
+
+The search algorithm implementations are integrated into the Dataclenz library's broader data management framework. The library provides a DataFrame structure for data storage and manipulation, with search capabilities operating as methods on this structure.
+
+The overall architecture follows a modular design pattern, separating concerns between:
+
+\begin{itemize}
+    \item Data storage and representation (DataFrame structure)
+    \item Algorithm implementation (search functions)
+    \item Performance measurement (metrics collection)
+    \item Results analysis (visualization and reporting)
+\end{itemize}
+
+\section{Data Structures}
+
+\subsection{DataFrame Structure}
+The Dataclenz library uses a custom DataFrame implementation to store and manage data:
+
+\begin{lstlisting}[style=c]
+typedef struct {
+    Column *columns;  // Array of columns
+    char **column_names;  // Array of column names
+    int num_columns;  // Number of columns
+    int num_rows;  // Number of rows
+    int max_rows;  // Maximum number of rows allocated
+} DataFrame;
+\end{lstlisting}
+
+This structure provides a tabular representation of data with typed columns, similar to databases or spreadsheets.
+
+\subsection{Column Structure}
+Each column within a DataFrame contains data of a specific type:
+
+\begin{lstlisting}[style=c]
+typedef struct {
+    void *data;  // Pointer to the column data
+    ColumnType type;  // Data type of the column
+    int length;  // Length of the column
+} Column;
+\end{lstlisting}
+
+The Column structure uses a void pointer to accommodate different data types, with the ColumnType enumeration specifying the actual type:
+
+\begin{lstlisting}[style=c]
+typedef enum {
+    TYPE_INT,
+    TYPE_FLOAT,
+    TYPE_STRING
+} ColumnType;
+\end{lstlisting}
+
+\subsection{Performance Metrics Structure}
+For measuring and recording algorithm performance, a dedicated structure was implemented:
+
+\begin{lstlisting}[style=c]
+typedef struct {
+    char search_type[20];  // Name of search algorithm
+    int dataset_size;  // Size of the dataset
+    int num_searches;  // Number of searches performed
+    double avg_search_time;  // Average search time
+    int avg_comparisons;  // Average number of comparisons
+    int successful_searches;  // Number of successful searches
+    int memory_usage_kb;  // Memory usage in KB
+} SearchPerformanceMetrics;
+\end{lstlisting}
+
+This structure encapsulates all relevant performance metrics for each test case, facilitating comprehensive analysis.
+
+\section{Algorithm Flow}
+
+\subsection{Binary Search Flow}
+The Binary Search algorithm follows this general flow:
+
+\begin{enumerate}
+    \item Initialize search boundaries to cover the entire sorted array
+    \item Calculate the middle point of the current search bounds
+    \item Compare the target value with the middle element
+    \item If equal, return the index of the middle element
+    \item If target is less than the middle element, search the lower half
+    \item If target is greater than the middle element, search the upper half
+    \item Repeat steps 2-6 until target is found or search space is empty
+\end{enumerate}
+
+\subsection{Jump Search Flow}
+The Jump Search algorithm follows this sequence:
+
+\begin{enumerate}
+    \item Calculate the optimal jump step size (typically sqrt(n))
+    \item Jump ahead by step size until a value greater than the target is found
+    \item Perform a linear search backward from the point where the jump ended
+    \item Return the index if target is found, otherwise indicate not found
+\end{enumerate}
+
+\section{Flow Chart}
+
+[THIS IS PLACEHOLDER FOR FLOW CHART - The flowchart would illustrate the step-by-step process of both search algorithms, including initialization, comparison steps, and termination conditions.]
+
+\section{Integration with DataFrame Operations}
+
+The search algorithms are integrated with the DataFrame structure through wrapper functions that:
+
+\begin{enumerate}
+    \item Verify the column exists and is of a compatible type
+    \item Sort the data if required (both algorithms require sorted input)
+    \item Call the appropriate search algorithm implementation
+    \item Return indices or a filtered DataFrame containing matching rows
+\end{enumerate}
+
+This integration ensures the search operations work seamlessly with the rest of the Dataclenz library's functionality.
+
+\section{Design Considerations}
+
+Several key design considerations influenced the implementation:
+
+\begin{itemize}
+    \item \textbf{Generality:} The algorithms are designed to work with multiple data types
+    \item \textbf{Performance:} Critical sections are optimized to minimize unnecessary operations
+    \item \textbf{Memory Efficiency:} Both algorithms maintain O(1) space complexity
+    \item \textbf{Error Handling:} Robust checking for edge cases and invalid inputs
+    \item \textbf{Testability:} Structure allows for isolated testing of component parts
+\end{itemize}
+
+These considerations ensure the search implementations are both efficient and robust across a wide range of use cases.
