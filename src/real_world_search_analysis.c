@@ -29,6 +29,15 @@ RealWorldMetrics measure_binary_search_real_data(DataFrame* df, int column_index
     metrics.avg_comparisons = 0;
     metrics.successful_searches = 0;
 
+    // Replace all NULL strings with empty strings
+    if (df->columns[column_index].type == TYPE_STRING) {
+        for (int i = 0; i < df->num_rows; i++) {
+            if (((char**)df->columns[column_index].data)[i] == NULL) {
+                ((char**)df->columns[column_index].data)[i] = strdup("");
+            }
+        }
+    }
+
     // Sort the DataFrame first (binary search requires sorted data)
     DataFrame* sorted_df = sort_dataframe(df, column_index, 1);
     if (sorted_df == NULL) {
@@ -70,13 +79,17 @@ RealWorldMetrics measure_binary_search_real_data(DataFrame* df, int column_index
             }
             case TYPE_STRING: {
                 char* str = ((char**)sorted_df->columns[column_index].data)[random_index];
-                if (str != NULL) {
-                    char* string_target = strdup(str);
+                if (str == NULL) {
+                    // If str is NULL, use empty string
+                    char* string_target = strdup("");
+                    target = string_target;
+                } else if (strlen(str) == 0) {
+                    // If empty string, use a copy
+                    char* string_target = strdup("");
                     target = string_target;
                 } else {
-                    // Skip null strings
-                    i--;
-                    continue;
+                    char* string_target = strdup(str);
+                    target = string_target;
                 }
                 break;
             }
@@ -121,6 +134,15 @@ RealWorldMetrics measure_jump_search_real_data(DataFrame* df, int column_index, 
     metrics.avg_comparisons = 0;
     metrics.successful_searches = 0;
 
+    // Replace all NULL strings with empty strings
+    if (df->columns[column_index].type == TYPE_STRING) {
+        for (int i = 0; i < df->num_rows; i++) {
+            if (((char**)df->columns[column_index].data)[i] == NULL) {
+                ((char**)df->columns[column_index].data)[i] = strdup("");
+            }
+        }
+    }
+
     // Sort the DataFrame first (jump search requires sorted data)
     DataFrame* sorted_df = sort_dataframe(df, column_index, 1);
     if (sorted_df == NULL) {
@@ -162,13 +184,17 @@ RealWorldMetrics measure_jump_search_real_data(DataFrame* df, int column_index, 
             }
             case TYPE_STRING: {
                 char* str = ((char**)sorted_df->columns[column_index].data)[random_index];
-                if (str != NULL) {
-                    char* string_target = strdup(str);
+                if (str == NULL) {
+                    // If str is NULL, use empty string
+                    char* string_target = strdup("");
+                    target = string_target;
+                } else if (strlen(str) == 0) {
+                    // If empty string, use a copy
+                    char* string_target = strdup("");
                     target = string_target;
                 } else {
-                    // Skip null strings
-                    i--;
-                    continue;
+                    char* string_target = strdup(str);
+                    target = string_target;
                 }
                 break;
             }
@@ -228,6 +254,28 @@ void save_real_world_metrics_to_csv(RealWorldMetrics* metrics_array, int metrics
     printf("Real-world performance metrics saved to %s\n", filename);
 }
 
+// Function to preprocess DataFrame by replacing NULL strings with empty strings
+void preprocess_dataframe(DataFrame* df) {
+    if (df == NULL) {
+        return;
+    }
+    
+    // For each string column, replace NULL values with empty strings
+    for (int col = 0; col < df->num_columns; col++) {
+        if (df->columns[col].type == TYPE_STRING) {
+            for (int row = 0; row < df->num_rows; row++) {
+                char** string_data = (char**)df->columns[col].data;
+                if (string_data[row] == NULL) {
+                    string_data[row] = strdup("");
+                    if (string_data[row] == NULL) {
+                        printf("Warning: Failed to allocate memory for empty string\n");
+                    }
+                }
+            }
+        }
+    }
+}
+
 int main() {
     // Seed the random number generator
     srand((unsigned int)time(NULL));
@@ -256,6 +304,10 @@ int main() {
     
     if (moma_df != NULL) {
         printf("MoMA dataset loaded: %d rows, %d columns\n", moma_df->num_rows, moma_df->num_columns);
+        
+        // Preprocess the dataset to handle NULL strings
+        printf("Preprocessing MoMA dataset to handle NULL values...\n");
+        preprocess_dataframe(moma_df);
         
         // Find the column indices we want to search
         int name_col = -1;
@@ -310,6 +362,10 @@ int main() {
     
     if (housing_df != NULL) {
         printf("Housing dataset loaded: %d rows, %d columns\n", housing_df->num_rows, housing_df->num_columns);
+        
+        // Preprocess the dataset to handle NULL strings
+        printf("Preprocessing housing dataset to handle NULL values...\n");
+        preprocess_dataframe(housing_df);
         
         // Test with numeric columns - median_house_value and median_income
         int house_value_col = -1;

@@ -143,6 +143,16 @@ INPUT /home/rishi/.miktex/texmfs/install/tex/latex/xcolor/xcolor.sty
 INPUT /home/rishi/.miktex/texmfs/install/tex/latex/xcolor/xcolor.sty
 INPUT /home/rishi/.miktex/texmfs/install/tex/latex/graphics-cfg/color.cfg
 INPUT /home/rishi/.miktex/texmfs/install/tex/latex/graphics/mathcolor.ltx
+INPUT /home/rishi/.miktex/texmfs/install/tex/latex/base/textcomp.sty
+INPUT /home/rishi/.miktex/texmfs/install/tex/latex/base/textcomp.sty
+INPUT /home/rishi/.miktex/texmfs/install/tex/latex/csquotes/csquotes.sty
+INPUT /home/rishi/.miktex/texmfs/install/tex/latex/csquotes/csquotes.sty
+INPUT /home/rishi/.miktex/texmfs/install/tex/latex/csquotes/csquotes.def
+INPUT /home/rishi/.miktex/texmfs/install/tex/latex/csquotes/csquotes.def
+INPUT /home/rishi/.miktex/texmfs/install/tex/latex/csquotes/csquotes.def
+INPUT /home/rishi/.miktex/texmfs/install/tex/latex/csquotes/csquotes.cfg
+INPUT /home/rishi/.miktex/texmfs/install/tex/latex/csquotes/csquotes.cfg
+INPUT /home/rishi/.miktex/texmfs/install/tex/latex/csquotes/csquotes.cfg
 INPUT /home/rishi/.miktex/texmfs/install/tex/latex/minted/minted.sty
 INPUT /home/rishi/.miktex/texmfs/install/tex/latex/minted/minted.sty
 INPUT /home/rishi/.miktex/texmfs/install/tex/generic/catchfile/catchfile.sty
@@ -183,8 +193,6 @@ INPUT /home/rishi/.miktex/texmfs/install/tex/latex/epstopdf-pkg/epstopdf-base.st
 INPUT /home/rishi/.miktex/texmfs/install/tex/latex/00miktex/epstopdf-sys.cfg
 INPUT /home/rishi/.miktex/texmfs/install/tex/latex/00miktex/epstopdf-sys.cfg
 INPUT /home/rishi/.miktex/texmfs/install/tex/latex/00miktex/epstopdf-sys.cfg
-INPUT /home/rishi/.miktex/texmfs/install/tex/latex/base/textcomp.sty
-INPUT /home/rishi/.miktex/texmfs/install/tex/latex/base/textcomp.sty
 OUTPUT main.out
 OUTPUT main.pdf
 INPUT /home/rishi/.miktex/texmfs/install/fonts/tfm/public/cm/cmcsc10.tfm
@@ -204,6 +212,7 @@ OUTPUT chapters/abstract.aux
 INPUT ./chapters/abstract.tex
 INPUT ./chapters/abstract.tex
 INPUT chapters/abstract.tex
+INPUT /home/rishi/.miktex/texmfs/install/fonts/tfm/public/cm/cmbx12.tfm
 INPUT ./chapters/introduction.tex
 INPUT ./chapters/introduction.tex
 OUTPUT chapters/introduction.aux
@@ -218,7 +227,6 @@ OUTPUT chapters/methodology.aux
 INPUT ./chapters/methodology.tex
 INPUT ./chapters/methodology.tex
 INPUT chapters/methodology.tex
-INPUT /home/rishi/.miktex/texmfs/install/fonts/tfm/public/cm/cmbx12.tfm
 INPUT /home/rishi/.miktex/texmfs/install/fonts/tfm/public/cm/cmbx12.tfm
 INPUT /home/rishi/.miktex/texmfs/install/fonts/tfm/public/cm/cmr8.tfm
 INPUT /home/rishi/.miktex/texmfs/install/fonts/tfm/public/cm/cmr6.tfm

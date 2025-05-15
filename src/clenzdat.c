@@ -1639,7 +1639,20 @@ DataFrame* sort_dataframe(DataFrame *df, int column_index, int ascending) {
                 case TYPE_STRING: {
                     char *a = ((char**)sorted_df->columns[column_index].data)[j];
                     char *b = ((char**)sorted_df->columns[column_index].data)[j + 1];
-                    int cmp = strcmp(a, b);
+                    int cmp;
+                    
+                    // Handle NULL strings - NULL is considered less than any non-NULL string
+                    if (a == NULL && b == NULL) {
+                        cmp = 0;  // Both NULL, consider equal
+                    } else if (a == NULL) {
+                        cmp = -1; // a is NULL, b is not NULL, so a < b
+                    } else if (b == NULL) {
+                        cmp = 1;  // a is not NULL, b is NULL, so a > b
+                    } else {
+                        // Both strings are non-NULL, safe to use strcmp
+                        cmp = strcmp(a, b);
+                    }
+                    
                     swap = ascending ? (cmp > 0) : (cmp < 0);
                     break;
                 }
@@ -2265,7 +2278,20 @@ static int compare_float(const void* a, const void* b) {
 }
 
 static int compare_string(const void* a, const void* b) {
-    return strcmp(*(char**)a, *(char**)b);
+    char* str_a = *(char**)a;
+    char* str_b = *(char**)b;
+    
+    // Handle NULL strings
+    if (str_a == NULL && str_b == NULL) {
+        return 0;  // Both NULL, consider equal
+    } else if (str_a == NULL) {
+        return -1; // a is NULL, b is not NULL, so a < b
+    } else if (str_b == NULL) {
+        return 1;  // a is not NULL, b is NULL, so a > b
+    }
+    
+    // Both strings are non-NULL, safe to use strcmp
+    return strcmp(str_a, str_b);
 }
 
 // Function to sort DataFrame by a specified column
@@ -2336,7 +2362,22 @@ int binary_search(DataFrame* df, int column_index, void* target, int* found_indi
                 }
                 break;
             case TYPE_STRING:
-                compare_result = strcmp((char*)target, ((char**)column->data)[mid]);
+                {
+                    char* target_str = (char*)target;
+                    char* mid_str = ((char**)column->data)[mid];
+                    
+                    // Handle NULL strings
+                    if (target_str == NULL && mid_str == NULL) {
+                        compare_result = 0;  // Both NULL, consider equal
+                    } else if (target_str == NULL) {
+                        compare_result = -1; // target is NULL, mid is not NULL, so target < mid
+                    } else if (mid_str == NULL) {
+                        compare_result = 1;  // target is not NULL, mid is NULL, so target > mid
+                    } else {
+                        // Both strings are non-NULL, safe to use strcmp
+                        compare_result = strcmp(target_str, mid_str);
+                    }
+                }
                 break;
             default:
                 set_error("Unsupported data type for binary search");
@@ -2367,7 +2408,22 @@ int binary_search(DataFrame* df, int column_index, void* target, int* found_indi
                         }
                         break;
                     case TYPE_STRING:
-                        compare_left = strcmp((char*)target, ((char**)column->data)[left_ptr]);
+                        {
+                            char* target_str = (char*)target;
+                            char* left_str = ((char**)column->data)[left_ptr];
+                            
+                            // Handle NULL strings
+                            if (target_str == NULL && left_str == NULL) {
+                                compare_left = 0;  // Both NULL, consider equal
+                            } else if (target_str == NULL) {
+                                compare_left = -1; // target is NULL, left is not NULL, so target < left
+                            } else if (left_str == NULL) {
+                                compare_left = 1;  // target is not NULL, left is NULL, so target > left
+                            } else {
+                                // Both strings are non-NULL, safe to use strcmp
+                                compare_left = strcmp(target_str, left_str);
+                            }
+                        }
                         break;
                 }
                 
@@ -2395,7 +2451,22 @@ int binary_search(DataFrame* df, int column_index, void* target, int* found_indi
                         }
                         break;
                     case TYPE_STRING:
-                        compare_right = strcmp((char*)target, ((char**)column->data)[right_ptr]);
+                        {
+                            char* target_str = (char*)target;
+                            char* right_str = ((char**)column->data)[right_ptr];
+                            
+                            // Handle NULL strings
+                            if (target_str == NULL && right_str == NULL) {
+                                compare_right = 0;  // Both NULL, consider equal
+                            } else if (target_str == NULL) {
+                                compare_right = -1; // target is NULL, right is not NULL, so target < right
+                            } else if (right_str == NULL) {
+                                compare_right = 1;  // target is not NULL, right is NULL, so target > right
+                            } else {
+                                // Both strings are non-NULL, safe to use strcmp
+                                compare_right = strcmp(target_str, right_str);
+                            }
+                        }
                         break;
                 }
                 
@@ -2454,7 +2525,22 @@ int jump_search(DataFrame* df, int column_index, void* target, int* found_indice
                 }
                 break;
             case TYPE_STRING:
-                compare_result = strcmp((char*)target, ((char**)column->data)[prev]);
+                {
+                    char* target_str = (char*)target;
+                    char* prev_str = ((char**)column->data)[prev];
+                    
+                    // Handle NULL strings
+                    if (target_str == NULL && prev_str == NULL) {
+                        compare_result = 0;  // Both NULL, consider equal
+                    } else if (target_str == NULL) {
+                        compare_result = -1; // target is NULL, prev is not NULL, so target < prev
+                    } else if (prev_str == NULL) {
+                        compare_result = 1;  // target is not NULL, prev is NULL, so target > prev
+                    } else {
+                        // Both strings are non-NULL, safe to use strcmp
+                        compare_result = strcmp(target_str, prev_str);
+                    }
+                }
                 break;
             default:
                 set_error("Unsupported data type for jump search");
@@ -2480,7 +2566,22 @@ int jump_search(DataFrame* df, int column_index, void* target, int* found_indice
                         }
                         break;
                     case TYPE_STRING:
-                        compare_left = strcmp((char*)target, ((char**)column->data)[left]);
+                        {
+                            char* target_str = (char*)target;
+                            char* left_str = ((char**)column->data)[left];
+                            
+                            // Handle NULL strings
+                            if (target_str == NULL && left_str == NULL) {
+                                compare_left = 0;  // Both NULL, consider equal
+                            } else if (target_str == NULL) {
+                                compare_left = -1; // target is NULL, left is not NULL, so target < left
+                            } else if (left_str == NULL) {
+                                compare_left = 1;  // target is not NULL, left is NULL, so target > left
+                            } else {
+                                // Both strings are non-NULL, safe to use strcmp
+                                compare_left = strcmp(target_str, left_str);
+                            }
+                        }
                         break;
                 }
                 
@@ -2506,7 +2607,22 @@ int jump_search(DataFrame* df, int column_index, void* target, int* found_indice
                         }
                         break;
                     case TYPE_STRING:
-                        compare_right = strcmp((char*)target, ((char**)column->data)[right]);
+                        {
+                            char* target_str = (char*)target;
+                            char* right_str = ((char**)column->data)[right];
+                            
+                            // Handle NULL strings
+                            if (target_str == NULL && right_str == NULL) {
+                                compare_right = 0;  // Both NULL, consider equal
+                            } else if (target_str == NULL) {
+                                compare_right = -1; // target is NULL, right is not NULL, so target < right
+                            } else if (right_str == NULL) {
+                                compare_right = 1;  // target is not NULL, right is NULL, so target > right
+                            } else {
+                                // Both strings are non-NULL, safe to use strcmp
+                                compare_right = strcmp(target_str, right_str);
+                            }
+                        }
                         break;
                 }
                 
@@ -2544,7 +2660,22 @@ int jump_search(DataFrame* df, int column_index, void* target, int* found_indice
                 }
                 break;
             case TYPE_STRING:
-                compare_linear = strcmp((char*)target, ((char**)column->data)[i]);
+                {
+                    char* target_str = (char*)target;
+                    char* i_str = ((char**)column->data)[i];
+                    
+                    // Handle NULL strings
+                    if (target_str == NULL && i_str == NULL) {
+                        compare_linear = 0;  // Both NULL, consider equal
+                    } else if (target_str == NULL) {
+                        compare_linear = -1; // target is NULL, i_str is not NULL, so target < i_str
+                    } else if (i_str == NULL) {
+                        compare_linear = 1;  // target is not NULL, i_str is NULL, so target > i_str
+                    } else {
+                        // Both strings are non-NULL, safe to use strcmp
+                        compare_linear = strcmp(target_str, i_str);
+                    }
+                }
                 break;
         }
         
@@ -2567,7 +2698,22 @@ int jump_search(DataFrame* df, int column_index, void* target, int* found_indice
                         }
                         break;
                     case TYPE_STRING:
-                        compare_next = strcmp((char*)target, ((char**)column->data)[j]);
+                        {
+                            char* target_str = (char*)target;
+                            char* j_str = ((char**)column->data)[j];
+                            
+                            // Handle NULL strings
+                            if (target_str == NULL && j_str == NULL) {
+                                compare_next = 0;  // Both NULL, consider equal
+                            } else if (target_str == NULL) {
+                                compare_next = -1; // target is NULL, j_str is not NULL, so target < j_str
+                            } else if (j_str == NULL) {
+                                compare_next = 1;  // target is not NULL, j_str is NULL, so target > j_str
+                            } else {
+                                // Both strings are non-NULL, safe to use strcmp
+                                compare_next = strcmp(target_str, j_str);
+                            }
+                        }
                         break;
                 }
                 
