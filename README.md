@@ -8,17 +8,33 @@ Dataclenz significantly outperforms Python's Pandas/Sklearn libraries across var
 
 ### Wine Quality Dataset (258kb)
 
-| Library        | Read    | Preprocessing | Normalisation | Fitting | Predictions | Total Time | R2    | MSE    | Memory   | Runtime Memory |
-|----------------|---------|--------------|--------------|---------|------------|-----------|-------|--------|----------|----------------|
-| **Dataclenz**  | 0.023   | 0.006        | 0.003        | 0.01    | 0.001      | 0.048     | 0.2754| 0.5683 | 1.34 MB  | 1.7 MB         |
-| Pandas.Sklearn | 0.0141  | 0.0083       | 0.0074       | 0.0077  | 0.001      | 0.0516    | 0.2653| 0.569  | 3.53 MB  | 91 MB          |
+| Metric | **Dataclenz** | Pandas.Sklearn |
+|--------|---------------|----------------|
+| Read | 0.023 | 0.0141 |
+| Preprocessing | 0.006 | 0.0083 |
+| Normalisation | 0.003 | 0.0074 |
+| Fitting | 0.01 | 0.0077 |
+| Predictions | 0.001 | 0.001 |
+| Total Time | 0.048 | 0.0516 |
+| R2 | 0.2754 | 0.2653 |
+| MSE | 0.5683 | 0.569 |
+| Memory | 1.34 MB | 3.53 MB |
+| Runtime Memory | 1.7 MB | 91 MB |
 
 ### Household Power Consumption Dataset (128mb)
 
-| Library        | Read    | Preprocessing | Normalisation | Fitting | Predictions | Total Time | R2    | MSE     | Memory     | Runtime Memory |
-|----------------|---------|--------------|--------------|---------|------------|-----------|-------|---------|------------|----------------|
-| **Dataclenz**  | 9.422   | 1.234        | 0.184        | 1.055   | 0.099      | 12.092    | 0.9981| 0       | 313.23 MB  | 313.6 MB       |
-| Pandas.Sklearn | 2.2518  | 5.675        | 0.2247       | 0.209   | 0.01       | 8.9477    | 0.9986| 0.0016  | 378.42 MB  | 466.3 MB       |
+| Metric | **Dataclenz** | Pandas.Sklearn |
+|--------|---------------|----------------|
+| Read | 9.422 | 2.2518 |
+| Preprocessing | 1.234 | 5.675 |
+| Normalisation | 0.184 | 0.2247 |
+| Fitting | 1.055 | 0.209 |
+| Predictions | 0.099 | 0.01 |
+| Total Time | 12.092 | 8.9477 |
+| R2 | 0.9981 | 0.9986 |
+| MSE | 0 | 0.0016 |
+| Memory | 313.23 MB | 378.42 MB |
+| Runtime Memory | 313.6 MB | 466.3 MB |
 
 ### Key Advantages over Python
 
